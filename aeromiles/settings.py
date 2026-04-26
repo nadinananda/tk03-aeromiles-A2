@@ -42,6 +42,10 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'feat_biru',
+    'feat_hijau',
+    'feat_kuning',
+    'feat_merah',
 ]
 
 MIDDLEWARE = [
