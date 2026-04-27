@@ -26,37 +26,3 @@ CREATE TABLE MEMBER (
     total_miles INT DEFAULT 0
 );
 
-CREATE TABLE PENYEDIA (
-    id SERIAL PRIMARY KEY
-);
-
-CREATE TABLE HADIAH (
-    kode_hadiah VARCHAR(20) PRIMARY KEY,
-    nama VARCHAR(100) NOT NULL,
-    miles INT NOT NULL,
-    deskripsi TEXT,
-    valid_start_date DATE NOT NULL,
-    program_end DATE NOT NULL,
-    id_penyedia INT NOT NULL REFERENCES PENYEDIA(id) ON DELETE CASCADE
-);
-
-CREATE TABLE REDEEM (
-    email_member VARCHAR(100) NOT NULL REFERENCES MEMBER(email) ON DELETE CASCADE,
-    kode_hadiah VARCHAR(20) NOT NULL REFERENCES HADIAH(kode_hadiah),
-    timestamp TIMESTAMP NOT NULL,
-    PRIMARY KEY (email_member, kode_hadiah, timestamp)
-);
-
-CREATE TABLE AWARD_MILES_PACKAGE (
-    id VARCHAR(20) PRIMARY KEY,
-    harga_paket DECIMAL(15,2) NOT NULL,
-    jumlah_award_miles INT NOT NULL
-);
-
-CREATE TABLE MEMBER_AWARD_MILES_PACKAGE (
-    id_award_miles_package VARCHAR(20) NOT NULL REFERENCES AWARD_MILES_PACKAGE(id),
-    email_member VARCHAR(100) NOT NULL REFERENCES MEMBER(email) ON DELETE CASCADE,
-    timestamp TIMESTAMP NOT NULL,
-    PRIMARY KEY (id_award_miles_package, email_member, timestamp)
-);
-
