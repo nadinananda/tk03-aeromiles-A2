@@ -51,7 +51,6 @@ def dashboard_view(request):
         'role': role_user,
     }
 
-    # DATA DUMMY SPESIFIK (Pencabangan berdasarkan role)
     if role_user == 'Member':
         context.update({
             'nomor_member': 'M0001',
