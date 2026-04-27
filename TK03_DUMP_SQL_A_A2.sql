@@ -55,3 +55,16 @@ CREATE TABLE MEMBER_AWARD_MILES_PACKAGE (
 );
 
 
+INSERT INTO PENGGUNA (email, password, salutation, first_mid_name, last_name, country_code, mobile_number, tanggal_lahir, kewarganegaraan) 
+VALUES ('member@aeromiles.com', '12345', 'Mr.', 'Akun', 'Member', '+62', '0811111111', '2000-01-01', 'Indonesia');
+
+INSERT INTO MEMBER (email, nomor_member, tanggal_bergabung, id_tier, award_miles, total_miles)
+VALUES ('member@aeromiles.com', 'M9999', '2024-01-01', 'T001', 32000, 45000);
+
+
+INSERT INTO PENGGUNA (email, password, salutation, first_mid_name, last_name, country_code, mobile_number, tanggal_lahir, kewarganegaraan) 
+VALUES ('staf@aeromiles.com', '12345', 'Mr.', 'Akun', 'Staf', '+62', '0822222222', '1990-01-01', 'Indonesia');
+
+
+INSERT INTO STAF (email, nomor_staf)
+VALUES ('staf@aeromiles.com', 'S9999');
