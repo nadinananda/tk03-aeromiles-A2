@@ -26,15 +26,3 @@ CREATE TABLE MEMBER (
     total_miles INT DEFAULT 0
 );
 
-CREATE TABLE MASKAPAI (
-    kode_maskapai VARCHAR(10) PRIMARY KEY,
-    nama_maskapai VARCHAR(100) NOT NULL,
-    id_penyedia INT NOT NULL -- FK ke PENYEDIA nanti
-);
-
-CREATE TABLE STAF (
-    email VARCHAR(100) PRIMARY KEY REFERENCES PENGGUNA(email) ON DELETE CASCADE,
-    id_staf VARCHAR(20) NOT NULL UNIQUE, -- Format S[XXXX] [cite: 1758]
-    kode_maskapai VARCHAR(10) NOT NULL REFERENCES MASKAPAI(kode_maskapai)
-);
-
