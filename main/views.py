@@ -38,4 +38,39 @@ def logout_view(request):
 def dashboard_view(request):
     if 'email' not in request.session:
         return redirect('main:login')
-    return render(request, 'dashboard.html')
+    
+    email_user = request.session.get('email')
+    role_user = request.session.get('role')
+
+    context = {
+        'nama': 'Mr. Juma Jordan Bimo', 
+        'email': email_user,
+        'telepon': '+62 81234567890',
+        'kewarganegaraan': 'Indonesia',
+        'tanggal_lahir': '2006-06-25',
+        'role': role_user,
+    }
+
+    if role_user == 'Member':
+        context.update({
+            'nomor_member': 'M0001',
+            'tier': 'Gold',
+            'total_miles': '45,000',
+            'award_miles': '32,000',
+            'tanggal_bergabung': '2024-01-15',
+            'transaksi': [
+                {'tipe': 'Transfer', 'waktu': '2025-01-15 10:30', 'jumlah': '-5,000'},
+                {'tipe': 'Redeem', 'waktu': '2025-01-20 16:00', 'jumlah': '-3,000'},
+                {'tipe': 'Package', 'waktu': '2025-03-01 08:00', 'jumlah': '+10,000'},
+            ]
+        })
+    elif role_user == 'Staf':
+        context.update({
+            'id_staf': 'S0001',
+            'maskapai': 'Garuda Indonesia',
+            'klaim_menunggu': 2,
+            'klaim_disetujui': 1,
+            'klaim_ditolak': 1,
+        })
+
+    return render(request, 'dashboard.html', context)
