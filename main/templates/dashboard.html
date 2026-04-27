@@ -1,0 +1,149 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div>
+    <h2 class="mb-1">Dashboard</h2>
+    <p class="text-muted mb-4">Selamat datang, {{ nama }}</p>
+
+    <div class="card shadow-sm mb-4">
+        <div class="card-body">
+            <h5 class="card-title mb-4">Informasi Pribadi</h5>
+            <div class="row">
+                <div class="col-md-4 mb-3">
+                    <label class="text-muted d-block small">Nama Lengkap</label>
+                    <strong>{{ nama }}</strong>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <label class="text-muted d-block small">Email</label>
+                    <strong>{{ email }}</strong>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <label class="text-muted d-block small">Telepon</label>
+                    <strong>{{ telepon }}</strong>
+                </div>
+                <div class="col-md-4">
+                    <label class="text-muted d-block small">Kewarganegaraan</label>
+                    <strong>{{ kewarganegaraan }}</strong>
+                </div>
+                <div class="col-md-4">
+                    <label class="text-muted d-block small">Tanggal Lahir</label>
+                    <strong>{{ tanggal_lahir }}</strong>
+                </div>
+                {% if role == 'Member' %}
+                <div class="col-md-4">
+                    <label class="text-muted d-block small">Tanggal Bergabung</label>
+                    <strong>{{ tanggal_bergabung }}</strong>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    {% if role == 'Member' %}
+    <div class="row mb-4 text-center">
+        <div class="col-md-3">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <small class="text-muted">Nomor Member</small>
+                    <h4 class="mb-0">{{ nomor_member }}</h4>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <small class="text-muted">Tier</small>
+                    <h4 class="mb-0 text-warning">{{ tier }}</h4>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <small class="text-muted">Total Miles</small>
+                    <h4 class="mb-0">{{ total_miles }}</h4>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <small class="text-muted">Award Miles</small>
+                    <h4 class="mb-0">{{ award_miles }}</h4>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-body">
+            <h5 class="card-title">5 Transaksi Terbaru</h5>
+            <table class="table mt-3">
+                <thead>
+                    <tr>
+                        <th>Tipe</th>
+                        <th>Waktu</th>
+                        <th class="text-end">Jumlah Miles</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for t in transaksi %}
+                    <tr>
+                        <td>{{ t.tipe }}</td>
+                        <td>{{ t.waktu }}</td>
+                        <td class="text-end {% if '-' in t.jumlah %}text-danger{% else %}text-success{% endif %}">
+                            {{ t.jumlah }} miles
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    {% elif role == 'Staf' %}
+    <div class="row text-center">
+        <div class="col-md-4 mb-3">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <small class="text-muted">ID Staf</small>
+                    <h4 class="mb-0">{{ id_staf }}</h4>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4 mb-3">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <small class="text-muted">Maskapai</small>
+                    <h4 class="mb-0">{{ maskapai }}</h4>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4 mb-3">
+            <div class="card shadow-sm border-warning">
+                <div class="card-body">
+                    <small class="text-muted">Klaim Menunggu</small>
+                    <h4 class="mb-0 text-warning">{{ klaim_menunggu }}</h4>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6 mb-3">
+            <div class="card shadow-sm border-success">
+                <div class="card-body">
+                    <small class="text-muted">Klaim Disetujui</small>
+                    <h4 class="mb-0 text-success">{{ klaim_disetujui }}</h4>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6 mb-3">
+            <div class="card shadow-sm border-danger">
+                <div class="card-body">
+                    <small class="text-muted">Klaim Ditolak</small>
+                    <h4 class="mb-0 text-danger">{{ klaim_ditolak }}</h4>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock content %}
