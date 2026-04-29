@@ -1,3 +1,4 @@
+--- Buat Tabel Umum 
 CREATE TABLE TIER (
     id_tier VARCHAR(10) PRIMARY KEY,
     nama VARCHAR(50) NOT NULL,
@@ -26,15 +27,44 @@ CREATE TABLE MEMBER (
     total_miles INT DEFAULT 0
 );
 
-CREATE TABLE MASKAPAI (
-    kode_maskapai VARCHAR(10) PRIMARY KEY,
-    nama_maskapai VARCHAR(100) NOT NULL,
-    id_penyedia INT NOT NULL -- FK ke PENYEDIA nanti
-);
-
 CREATE TABLE STAF (
     email VARCHAR(100) PRIMARY KEY REFERENCES PENGGUNA(email) ON DELETE CASCADE,
-    id_staf VARCHAR(20) NOT NULL UNIQUE, -- Format S[XXXX] [cite: 1758]
-    kode_maskapai VARCHAR(10) NOT NULL REFERENCES MASKAPAI(kode_maskapai)
+    nomor_staf VARCHAR(20) NOT NULL UNIQUE
 );
 
+--- Buat Feature Warna Biru NO. 11 - 14
+
+CREATE TABLE REDEEM (
+    email_member VARCHAR(100) NOT NULL REFERENCES MEMBER(email) ON DELETE CASCADE,
+    kode_hadiah VARCHAR(20) NOT NULL REFERENCES HADIAH(kode_hadiah),
+    timestamp TIMESTAMP NOT NULL,
+    PRIMARY KEY (email_member, kode_hadiah, timestamp)
+);
+
+CREATE TABLE AWARD_MILES_PACKAGE (
+    id VARCHAR(20) PRIMARY KEY,
+    harga_paket DECIMAL(15,2) NOT NULL,
+    jumlah_award_miles INT NOT NULL
+);
+
+CREATE TABLE MEMBER_AWARD_MILES_PACKAGE (
+    id_award_miles_package VARCHAR(20) NOT NULL REFERENCES AWARD_MILES_PACKAGE(id),
+    email_member VARCHAR(100) NOT NULL REFERENCES MEMBER(email) ON DELETE CASCADE,
+    timestamp TIMESTAMP NOT NULL,
+    PRIMARY KEY (id_award_miles_package, email_member, timestamp)
+);
+
+
+INSERT INTO PENGGUNA (email, password, salutation, first_mid_name, last_name, country_code, mobile_number, tanggal_lahir, kewarganegaraan) 
+VALUES ('member@aeromiles.com', '12345', 'Mr.', 'Akun', 'Member', '+62', '0811111111', '2000-01-01', 'Indonesia');
+
+INSERT INTO MEMBER (email, nomor_member, tanggal_bergabung, id_tier, award_miles, total_miles)
+VALUES ('member@aeromiles.com', 'M9999', '2024-01-01', 'T001', 32000, 45000);
+
+
+INSERT INTO PENGGUNA (email, password, salutation, first_mid_name, last_name, country_code, mobile_number, tanggal_lahir, kewarganegaraan) 
+VALUES ('staf@aeromiles.com', '12345', 'Mr.', 'Akun', 'Staf', '+62', '0822222222', '1990-01-01', 'Indonesia');
+
+
+INSERT INTO STAF (email, nomor_staf)
+VALUES ('staf@aeromiles.com', 'S9999');

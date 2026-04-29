@@ -46,6 +46,7 @@ INSTALLED_APPS = [
     'feat_hijau',
     'feat_kuning',
     'feat_merah',
+    'main',
 ]
 
 MIDDLEWARE = [
