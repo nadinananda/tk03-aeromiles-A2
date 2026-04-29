@@ -1,0 +1,192 @@
+{% extends 'feat_hijau/base.html' %}
+{% block title %}Kelola Klaim Missing Miles – AeroMiles{% endblock %}
+
+{% block content %}
+<div class="page-title">Kelola Klaim Missing Miles</div>
+
+<!-- ── FILTER ── -->
+<div class="card-aero mb-4">
+  <div class="card-body py-3 px-4">
+    <form method="GET" class="row g-2 align-items-end">
+      <div class="col-md-3">
+        <label class="form-label">Status</label>
+        <select name="status" class="form-select form-select-sm">
+          <option value="semua" {% if status_filter == 'semua' %}selected{% endif %}>Semua Status</option>
+          <option value="menunggu" {% if status_filter == 'menunggu' %}selected{% endif %}>Menunggu</option>
+          <option value="disetujui" {% if status_filter == 'disetujui' %}selected{% endif %}>Disetujui</option>
+          <option value="ditolak" {% if status_filter == 'ditolak' %}selected{% endif %}>Ditolak</option>
+        </select>
+      </div>
+      <div class="col-md-3">
+        <label class="form-label">Maskapai</label>
+        <select name="maskapai" class="form-select form-select-sm">
+          <option value="semua" {% if maskapai_filter == 'semua' %}selected{% endif %}>Semua Maskapai</option>
+          {% for mk in maskapai_list %}
+          <option value="{{ mk.kode }}" {% if maskapai_filter == mk.kode %}selected{% endif %}>
+            {{ mk.kode }} – {{ mk.nama }}
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-2">
+        <label class="form-label">Dari Tanggal</label>
+        <input type="date" name="tanggal_dari" class="form-control form-control-sm" value="{{ tanggal_dari }}">
+      </div>
+      <div class="col-md-2">
+        <label class="form-label">Sampai Tanggal</label>
+        <input type="date" name="tanggal_sampai" class="form-control form-control-sm" value="{{ tanggal_sampai }}">
+      </div>
+      <div class="col-md-2">
+        <button type="submit" class="btn btn-primary-aero btn-sm w-100">
+          <i class="bi bi-funnel me-1"></i> Filter
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ── TABLE ── -->
+<div class="card-aero">
+  <div class="card-body p-0">
+    <table class="table table-aero mb-0">
+      <thead>
+        <tr>
+          <th>No. Klaim</th>
+          <th>Member</th>
+          <th>Maskapai</th>
+          <th>Rute</th>
+          <th>Tanggal</th>
+          <th>Flight</th>
+          <th>Kelas</th>
+          <th>Tanggal Pengajuan</th>
+          <th>Status</th>
+          <th>Aksi</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for k in klaim_list %}
+        <tr>
+          <td><strong>CLM-{{ k.id|stringformat:"03d" }}</strong></td>
+          <td>
+            <div style="font-weight:600;color:#1e293b">{{ k.nama_member }}</div>
+            <div style="font-size:.75rem;color:#64748b">{{ k.email_member }}</div>
+          </td>
+          <td>{{ k.maskapai }}</td>
+          <td>{{ k.bandara_asal }} → {{ k.bandara_tujuan }}</td>
+          <td>{{ k.tanggal_penerbangan }}</td>
+          <td>{{ k.flight_number }}</td>
+          <td>{{ k.kelas_kabin }}</td>
+          <td style="font-size:.8rem">{{ k.timestamp|date:"Y-m-d H:i" }}</td>
+          <td>
+            {% if k.status_penerimaan == 'Menunggu' %}
+              <span class="status-badge badge-menunggu">Menunggu</span>
+            {% elif k.status_penerimaan == 'Disetujui' %}
+              <span class="status-badge badge-disetujui">Disetujui</span>
+            {% else %}
+              <span class="status-badge badge-ditolak">Ditolak</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if k.status_penerimaan == 'Menunggu' %}
+            <button class="btn-sm-icon btn-approve me-1"
+                    onclick="showKonfirmasi({{ k.id }}, 'Disetujui', '{{ k.nama_member }}', '{{ k.bandara_asal }}', '{{ k.bandara_tujuan }}', '{{ k.kelas_kabin }}')"
+                    data-bs-toggle="modal" data-bs-target="#modalSetujui"
+                    title="Setujui">
+              <i class="bi bi-check-lg"></i>
+            </button>
+            <button class="btn-sm-icon btn-reject"
+                    onclick="showKonfirmasi({{ k.id }}, 'Ditolak', '{{ k.nama_member }}', '{{ k.bandara_asal }}', '{{ k.bandara_tujuan }}', '{{ k.kelas_kabin }}')"
+                    data-bs-toggle="modal" data-bs-target="#modalTolak"
+                    title="Tolak">
+              <i class="bi bi-x-lg"></i>
+            </button>
+            {% else %}
+            <span class="text-muted" style="font-size:.8rem"><i class="bi bi-lock"></i></span>
+            {% endif %}
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="10" class="text-center text-muted py-4">
+            <i class="bi bi-inbox" style="font-size:2rem;display:block;margin-bottom:.5rem"></i>
+            Tidak ada klaim ditemukan
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+
+<!-- ── MODAL SETUJUI ── -->
+<div class="modal fade" id="modalSetujui" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title"><i class="bi bi-check-circle me-2"></i>Setujui Klaim</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <p class="text-muted mb-3">Miles akan ditambahkan ke akun member sesuai rute dan kelas kabin.</p>
+        <div id="setujuiDetail" class="p-3 rounded" style="background:#f1f5f9;font-size:.88rem"></div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
+        <form method="POST" id="formSetujui">
+          {% csrf_token %}
+          <input type="hidden" name="status" value="Disetujui">
+          <button type="submit" class="btn btn-success"><i class="bi bi-check-lg me-1"></i> Setujui</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ── MODAL TOLAK ── -->
+<div class="modal fade" id="modalTolak" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header" style="background:#dc2626;">
+        <h5 class="modal-title"><i class="bi bi-x-circle me-2"></i>Tolak Klaim</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <p class="text-muted mb-3">Klaim akan ditolak dan member akan diinformasikan.</p>
+        <div id="tolakDetail" class="p-3 rounded" style="background:#f1f5f9;font-size:.88rem"></div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
+        <form method="POST" id="formTolak">
+          {% csrf_token %}
+          <input type="hidden" name="status" value="Ditolak">
+          <button type="submit" class="btn btn-danger"><i class="bi bi-x-lg me-1"></i> Tolak</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function showKonfirmasi(id, status, nama, asal, tujuan, kelas) {
+  const detail = `
+    <strong>Klaim:</strong> CLM-${String(id).padStart(3,'0')}<br>
+    <strong>Member:</strong> ${nama}<br>
+    <strong>Rute:</strong> ${asal} → ${tujuan}<br>
+    <strong>Kelas:</strong> ${kelas}
+  `;
+  const url = `/staf/klaim/${id}/status/`;
+  if (status === 'Disetujui') {
+    document.getElementById('setujuiDetail').innerHTML = detail;
+    document.getElementById('formSetujui').action = url;
+  } else {
+    document.getElementById('tolakDetail').innerHTML = detail;
+    document.getElementById('formTolak').action = url;
+  }
+}
+</script>
+{% endblock %}
