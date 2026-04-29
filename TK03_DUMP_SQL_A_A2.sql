@@ -59,7 +59,7 @@ INSERT INTO PENGGUNA (email, password, salutation, first_mid_name, last_name, co
 VALUES ('member@aeromiles.com', '12345', 'Mr.', 'Akun', 'Member', '+62', '0811111111', '2000-01-01', 'Indonesia');
 
 INSERT INTO MEMBER (email, nomor_member, tanggal_bergabung, id_tier, award_miles, total_miles)
-VALUES ('member@aeromiles.com', 'M9999', '2024-01-01', 'T001', 32000, 45000);
+VALUES ('member1@aeromiles.com', 'M9999', '2024-01-01', 'T001', 32000, 45000);
 
 
 INSERT INTO PENGGUNA (email, password, salutation, first_mid_name, last_name, country_code, mobile_number, tanggal_lahir, kewarganegaraan) 

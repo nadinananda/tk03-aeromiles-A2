@@ -40,6 +40,42 @@
     </div>
 
     {% if role == 'Member' %}
+    <!-- Card Navigasi Fitur -->
+    <div class="row mb-4">
+        <div class="col-md-6 mb-3">
+            <a href="{% url 'feat_biru:redeem_hadiah' %}" class="card shadow-sm text-decoration-none text-dark h-100">
+                <div class="card-body text-center">
+                    <h5 class="card-title">🎁 Redeem Hadiah</h5>
+                    <p class="card-text small text-muted">Tukarkan miles dengan hadiah menarik</p>
+                </div>
+            </a>
+        </div>
+        <div class="col-md-6 mb-3">
+            <a href="{% url 'feat_biru:beli_package' %}" class="card shadow-sm text-decoration-none text-dark h-100">
+                <div class="card-body text-center">
+                    <h5 class="card-title">💳 Beli Package</h5>
+                    <p class="card-text small text-muted">Beli miles tambahan dengan harga spesial</p>
+                </div>
+            </a>
+        </div>
+        <div class="col-md-6 mb-3">
+            <a href="{% url 'feat_biru:info_tier' %}" class="card shadow-sm text-decoration-none text-dark h-100">
+                <div class="card-body text-center">
+                    <h5 class="card-title">⭐ Info Tier</h5>
+                    <p class="card-text small text-muted">Lihat benefit dan syarat tier berikutnya</p>
+                </div>
+            </a>
+        </div>
+        <div class="col-md-6 mb-3">
+            <a href="#" class="card shadow-sm text-decoration-none text-dark h-100">
+                <div class="card-body text-center">
+                    <h5 class="card-title">📤 Transfer Miles</h5>
+                    <p class="card-text small text-muted">Transfer miles ke member lain</p>
+                </div>
+            </a>
+        </div>
+    </div>
+
     <div class="row mb-4 text-center">
         <div class="col-md-3">
             <div class="card shadow-sm">
@@ -102,6 +138,42 @@
     </div>
 
     {% elif role == 'Staf' %}
+    <!-- Card Navigasi Fitur Staf -->
+    <div class="row mb-4">
+        <div class="col-md-6 mb-3">
+            <a href="#" class="card shadow-sm text-decoration-none text-dark h-100">
+                <div class="card-body text-center">
+                    <h5 class="card-title">👥 Kelola Member</h5>
+                    <p class="card-text small text-muted">Kelola data dan status member</p>
+                </div>
+            </a>
+        </div>
+        <div class="col-md-6 mb-3">
+            <a href="#" class="card shadow-sm text-decoration-none text-dark h-100">
+                <div class="card-body text-center">
+                    <h5 class="card-title">✅ Kelola Klaim</h5>
+                    <p class="card-text small text-muted">Proses dan verifikasi klaim miles</p>
+                </div>
+            </a>
+        </div>
+        <div class="col-md-6 mb-3">
+            <a href="#" class="card shadow-sm text-decoration-none text-dark h-100">
+                <div class="card-body text-center">
+                    <h5 class="card-title">🎁 Kelola Hadiah</h5>
+                    <p class="card-text small text-muted">Tambah/edit hadiah dan penyedia</p>
+                </div>
+            </a>
+        </div>
+        <div class="col-md-6 mb-3">
+            <a href="{% url 'feat_biru:laporan_transaksi' %}" class="card shadow-sm text-decoration-none text-dark h-100">
+                <div class="card-body text-center">
+                    <h5 class="card-title">📊 Laporan Transaksi</h5>
+                    <p class="card-text small text-muted">Lihat semua transaksi sistem</p>
+                </div>
+            </a>
+        </div>
+    </div>
+
     <div class="row text-center">
         <div class="col-md-4 mb-3">
             <div class="card shadow-sm">
