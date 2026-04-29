@@ -1,0 +1,56 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>Laporan & Riwayat Transaksi Member</h2>
+    <span class="badge bg-secondary fs-6">Akses Staf</span>
+</div>
+
+<div class="card shadow-sm">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle">
+                <thead class="table-dark">
+                    <tr>
+                        <th>ID Transaksi</th>
+                        <th>Waktu</th>
+                        <th>Jenis Transaksi</th>
+                        <th>Member Terlibat</th>
+                        <th>Detail</th>
+                        <th class="text-center">Aksi</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for trx in transaksi_list %}
+                    <tr>
+                        <td><strong>{{ trx.id_trx }}</strong></td>
+                        <td>{{ trx.waktu }}</td>
+                        <td>
+                            {% if trx.jenis == 'Redeem Hadiah' %}
+                                <span class="badge bg-info text-dark">{{ trx.jenis }}</span>
+                            {% elif trx.jenis == 'Beli Package' %}
+                                <span class="badge bg-success">{{ trx.jenis }}</span>
+                            {% else %}
+                                <span class="badge bg-secondary">{{ trx.jenis }}</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ trx.pelaku }}</td>
+                        <td>{{ trx.detail }}</td>
+                        <td class="text-center">
+                            <form method="POST" action="#">
+                                {% csrf_token %}
+                                <input type="hidden" name="id_trx" value="{{ trx.id_trx }}">
+                                <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Yakin ingin menghapus riwayat ini?');">Hapus</button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="text-center text-muted py-4">Belum ada riwayat transaksi.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock content %}
