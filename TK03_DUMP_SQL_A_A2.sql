@@ -1,4 +1,3 @@
-DROP SCHEMA IF EXISTS aeromiles CASCADE;
 CREATE SCHEMA aeromiles;
 SET search_path TO aeromiles;
 

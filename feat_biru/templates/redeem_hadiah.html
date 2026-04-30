@@ -20,7 +20,6 @@
                 
                 <form method="POST" action="#">
                     {% csrf_token %}
-                    <!-- Nanti di TK04 lu passing ID/Kode Hadiah lewat hidden input -->
                     <input type="hidden" name="kode_hadiah" value="{{ hadiah.kode }}">
                     <button type="submit" class="btn btn-outline-primary w-100">Tukar Sekarang</button>
                 </form>
