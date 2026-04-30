@@ -3,6 +3,7 @@
 -- ==============================================================================
 DROP SCHEMA IF EXISTS aeromiles CASCADE;
 CREATE SCHEMA aeromiles;
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
 SET search_path TO aeromiles;
 
 -- ==============================================================================
@@ -147,17 +148,20 @@ INSERT INTO TIER (id_tier, nama, minimal_frekuensi_terbang, minimal_tier_miles) 
 ('T-GOLD', 'Gold', 30, 30000),
 ('T-PLAT', 'Platinum', 60, 60000);
 
--- PENGGUNA (60 Data: 50 Member + 10 Staf) menggunakan generate_series
+-- PENGGUNA (60 Data: 50 Member + 10 Staf) menggunakan generate_series, hash password '12345' dengan bcrypt
 INSERT INTO PENGGUNA (email, password, salutation, first_mid_name, last_name, country_code, mobile_number, tanggal_lahir, kewarganegaraan)
 SELECT 
-    'member' || x || '@aeromiles.com', 'hashed_pass_123', 
+    'member' || x || '@aeromiles.com', 
+    crypt('12345', gen_salt('bf')),
     CASE WHEN x % 2 = 0 THEN 'Mr.' ELSE 'Ms.' END, 'Akun', 'Member ' || x, '+62', 
     '08110000' || LPAD(x::varchar, 3, '0'), '1990-01-01'::date + (x || ' days')::interval, 'Indonesia'
 FROM generate_series(1, 50) as x;
 
 INSERT INTO PENGGUNA (email, password, salutation, first_mid_name, last_name, country_code, mobile_number, tanggal_lahir, kewarganegaraan)
 SELECT 
-    'staf' || x || '@aeromiles.com', 'hashed_pass_123', 'Mr.', 'Akun', 'Staf ' || x, '+62', 
+    'staf' || x || '@aeromiles.com', 
+    crypt('12345', gen_salt('bf')), 
+    'Mr.', 'Akun', 'Staf ' || x, '+62', 
     '08220000' || LPAD(x::varchar, 3, '0'), '1985-05-15'::date + (x || ' days')::interval, 'Indonesia'
 FROM generate_series(1, 10) as x;
 

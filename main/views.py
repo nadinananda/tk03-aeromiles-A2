@@ -17,7 +17,7 @@ def login_view(request):
 
         with connection.cursor() as cursor:
             cursor.execute(
-                "SELECT email FROM PENGGUNA WHERE email = %s AND password = %s", 
+                "SELECT email FROM PENGGUNA WHERE email = %s AND password = crypt(%s, password)", 
                 [email, password]
             )
             user = cursor.fetchone()
