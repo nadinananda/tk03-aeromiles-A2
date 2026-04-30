@@ -1,4 +1,3 @@
-<!-- ── NAVBAR ── -->
 <nav class="navbar navbar-expand-lg navbar-aeromiles">
   <div class="container-fluid">
     <a class="navbar-brand" href="{% url 'main:dashboard' %}">
@@ -11,23 +10,23 @@
       {% if request.session.role == 'Member' %}
       <ul class="navbar-nav me-auto">
         <li class="nav-item"><a class="nav-link {% if active_page == 'dashboard' %}active{% endif %}" href="{% url 'main:dashboard' %}"><i class="bi bi-grid-fill"></i> Dashboard</a></li>
-        <li class="nav-item"><a class="nav-link {% if active_page == 'identitas' %}active{% endif %}" href="#"><i class="bi bi-person-badge"></i> Identitas Saya</a></li>
-        <li class="nav-item"><a class="nav-link {% if active_page == 'klaim_miles' %}active{% endif %}" href="#"><i class="bi bi-clipboard-check"></i> Klaim Miles</a></li>
-        <li class="nav-item"><a class="nav-link {% if active_page == 'transfer_miles' %}active{% endif %}" href="#"><i class="bi bi-arrow-left-right"></i> Transfer Miles</a></li>
-        <li class="nav-item"><a class="nav-link {% if active_page == 'redeem' %}active{% endif %}" href="#"><i class="bi bi-gift"></i> Redeem Hadiah</a></li>
-        <li class="nav-item"><a class="nav-link {% if active_page == 'beli_package' %}active{% endif %}" href="#"><i class="bi bi-cart"></i> Beli Package</a></li>
-        <li class="nav-item"><a class="nav-link {% if active_page == 'info_tier' %}active{% endif %}" href="#"><i class="bi bi-trophy"></i> Info Tier</a></li>
-        <li class="nav-item"><a class="nav-link {% if active_page == 'pengaturan_profil' %}active{% endif %}" href="#"><i class="bi bi-gear"></i> Pengaturan Profil</a></li>
+        <li class="nav-item"><a class="nav-link {% if active_page == 'identitas' %}active{% endif %}" href="{% url 'kuning:identitas_member' %}"><i class="bi bi-person-badge"></i> Identitas Saya</a></li>
+        <li class="nav-item"><a class="nav-link {% if active_page == 'klaim_miles' %}active{% endif %}" href="{% url 'feat_hijau:klaim_miles' %}"><i class="bi bi-clipboard-check"></i> Klaim Miles</a></li>
+        <li class="nav-item"><a class="nav-link {% if active_page == 'transfer_miles' %}active{% endif %}" href="{% url 'feat_hijau:transfer_miles' %}"><i class="bi bi-arrow-left-right"></i> Transfer Miles</a></li>
+        <li class="nav-item"><a class="nav-link {% if active_page == 'redeem' %}active{% endif %}" href="{% url 'feat_biru:redeem_hadiah' %}"><i class="bi bi-gift"></i> Redeem Hadiah</a></li>
+        <li class="nav-item"><a class="nav-link {% if active_page == 'beli_package' %}active{% endif %}" href="{% url 'feat_biru:beli_package' %}"><i class="bi bi-cart"></i> Beli Package</a></li>
+        <li class="nav-item"><a class="nav-link {% if active_page == 'info_tier' %}active{% endif %}" href="{% url 'feat_biru:info_tier' %}"><i class="bi bi-trophy"></i> Info Tier</a></li>
+        <li class="nav-item"><a class="nav-link {% if active_page == 'pengaturan_profil' %}active{% endif %}" href="{% url 'feat_hijau:pengaturan_profil' %}"><i class="bi bi-gear"></i> Pengaturan Profil</a></li>
       </ul>
       {% elif request.session.role == 'Staf' %}
       <ul class="navbar-nav me-auto">
         <li class="nav-item"><a class="nav-link {% if active_page == 'dashboard' %}active{% endif %}" href="{% url 'main:dashboard' %}"><i class="bi bi-grid-fill"></i> Dashboard</a></li>
-        <li class="nav-item"><a class="nav-link {% if active_page == 'kelola_member' %}active{% endif %}" href="#"><i class="bi bi-people"></i> Kelola Member</a></li>
-        <li class="nav-item"><a class="nav-link {% if active_page == 'kelola_klaim' %}active{% endif %}" href="#"><i class="bi bi-clipboard2-check"></i> Kelola Klaim</a></li>
-        <li class="nav-item"><a class="nav-link {% if active_page == 'kelola_hadiah' %}active{% endif %}" href="#"><i class="bi bi-gift"></i> Kelola Hadiah & Penyedia</a></li>
-        <li class="nav-item"><a class="nav-link {% if active_page == 'kelola_mitra' %}active{% endif %}" href="#"><i class="bi bi-building"></i> Kelola Mitra</a></li>
-        <li class="nav-item"><a class="nav-link {% if active_page == 'laporan' %}active{% endif %}" href="#"><i class="bi bi-bar-chart"></i> Laporan Transaksi</a></li>
-        <li class="nav-item"><a class="nav-link {% if active_page == 'pengaturan_profil' %}active{% endif %}" href="#"><i class="bi bi-gear"></i> Pengaturan Profil</a></li>
+        <li class="nav-item"><a class="nav-link {% if active_page == 'kelola_member' %}active{% endif %}" href="{% url 'kuning:kelola_member' %}"><i class="bi bi-people"></i> Kelola Member</a></li>
+        <li class="nav-item"><a class="nav-link {% if active_page == 'kelola_klaim' %}active{% endif %}" href="{% url 'feat_hijau:kelola_klaim' %}"><i class="bi bi-clipboard2-check"></i> Kelola Klaim</a></li>
+        <li class="nav-item"><a class="nav-link {% if active_page == 'kelola_hadiah' %}active{% endif %}" href="{% url 'feat_merah:manage_rewards' %}"><i class="bi bi-gift"></i> Kelola Hadiah & Penyedia</a></li>
+        <li class="nav-item"><a class="nav-link {% if active_page == 'kelola_mitra' %}active{% endif %}" href="{% url 'feat_merah:manage_partners' %}"><i class="bi bi-building"></i> Kelola Mitra</a></li>
+        <li class="nav-item"><a class="nav-link {% if active_page == 'laporan' %}active{% endif %}" href="{% url 'feat_biru:laporan_transaksi' %}"><i class="bi bi-bar-chart"></i> Laporan Transaksi</a></li>
+        <li class="nav-item"><a class="nav-link {% if active_page == 'pengaturan_profil' %}active{% endif %}" href="{% url 'feat_hijau:pengaturan_profil' %}"><i class="bi bi-gear"></i> Pengaturan Profil</a></li>
       </ul>
       {% endif %}
       <ul class="navbar-nav ms-auto">
