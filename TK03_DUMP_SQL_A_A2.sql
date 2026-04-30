@@ -1,3 +1,7 @@
+DROP SCHEMA IF EXISTS aeromiles CASCADE;
+CREATE SCHEMA aeromiles;
+SET search_path TO aeromiles;
+
 --- Buat Tabel Umum
 CREATE TABLE TIER (
     id_tier VARCHAR(10) PRIMARY KEY,
@@ -76,6 +80,16 @@ CREATE TABLE MEMBER_AWARD_MILES_PACKAGE (
     email_member VARCHAR(100) NOT NULL REFERENCES MEMBER(email) ON DELETE CASCADE,
     timestamp TIMESTAMP NOT NULL,
     PRIMARY KEY (id_award_miles_package, email_member, timestamp)
+);
+
+--- Buat Feature Warna Kuning
+CREATE TABLE IDENTITAS (
+    nomor VARCHAR(50) PRIMARY KEY,
+    email_member VARCHAR(100) NOT NULL REFERENCES MEMBER(email) ON DELETE CASCADE,
+    tanggal_habis DATE NOT NULL,
+    tanggal_terbit DATE NOT NULL,
+    negara_penerbit VARCHAR(50) NOT NULL,
+    jenis VARCHAR(30) NOT NULL CHECK (jenis IN ('Paspor', 'KTP', 'SIM'))
 );
 
 --- Insert Data Dummy Tabel Umum
@@ -176,6 +190,13 @@ VALUES
     ('partner@aeroshop.com', 7, 'AeroShop', '2024-07-20'),
     ('partner@skymeal.com', 8, 'SkyMeal Indonesia', '2025-02-05');
 
+INSERT INTO AWARD_MILES_PACKAGE (id, harga_paket, jumlah_award_miles) VALUES
+('AMP-001', 500000.00, 1000),
+('AMP-002', 900000.00, 2000),
+('AMP-003', 2000000.00, 5000),
+('AMP-004', 3800000.00, 10000),
+('AMP-005', 7000000.00, 20000);
+
 INSERT INTO HADIAH (
     kode_hadiah, nama, miles, deskripsi, valid_start_date, program_end, id_penyedia
 )
@@ -223,3 +244,11 @@ VALUES
     ('member17@aeromiles.com', 'RWD-006', '2026-03-16 12:15:00'),
     ('member18@aeromiles.com', 'RWD-008', '2026-03-18 14:45:00'),
     ('member19@aeromiles.com', 'RWD-010', '2026-03-20 09:30:00');
+
+--- Insert Data Dummy Tabel Kuning
+INSERT INTO IDENTITAS (nomor, email_member, tanggal_habis, tanggal_terbit, negara_penerbit, jenis)
+SELECT
+    'IDN' || LPAD(x::varchar, 8, '0'), 'member' || LPAD(x::varchar, 2, '0') || '@aeromiles.com',
+    '2030-01-01'::date, '2020-01-01'::date, 'Indonesia',
+    CASE x % 3 WHEN 0 THEN 'Paspor' WHEN 1 THEN 'KTP' ELSE 'SIM' END
+FROM generate_series(1, 30) as x;
