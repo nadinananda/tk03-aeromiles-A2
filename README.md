@@ -2,7 +2,7 @@
 
 # AeroMiles
 
-## 📋 Prasyarat Sistem
+## Prasyarat Sistem
 Sebelum menjalankan aplikasi ini, pastikan sistem Anda telah terinstal:
 * **Python** (Versi 3.10 atau lebih baru)
 * **PostgreSQL** (Versi 14 atau lebih baru)
@@ -10,7 +10,7 @@ Sebelum menjalankan aplikasi ini, pastikan sistem Anda telah terinstal:
 
 ---
 
-## 🚀 Panduan Instalasi & Menjalankan Aplikasi
+## Panduan Instalasi & Menjalankan Aplikasi
 
 Ikuti langkah-langkah di bawah ini secara berurutan untuk menjalankan proyek di komputer lokal (localhost).
 
@@ -27,46 +27,51 @@ Ikuti langkah-langkah di bawah ini secara berurutan untuk menjalankan proyek di 
   
       CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
-Langkah 2: Setup Virtual Environment Python
+### Langkah 2: Setup Virtual Environment Python
 1. Buat virtual environment baru:
-  Bash :
+```Bash
      python -m venv env
+```
    
 1. Aktivasi virtual environment:
   - Windows:
-    Bash
+    ```Bash
       .\env\Scripts\activate
   - Mac/Linux:
-    Bash
+    ```Bash
       source env/bin/activate
 
-Langkah 3: Install Dependencies
-  Bash
+### Langkah 3: Install Dependencies
+  ```Bash
     pip install -r requirements.txt
+  ```
 
-Langkah 4: Konfigurasi Environment Variables (.env)
+### Langkah 4: Konfigurasi Environment Variables (.env)
 Buat file baru bernama .env di direktori utama proyek (sejajar dengan file manage.py), lalu copy-paste konfigurasi berikut. Sesuaikan DB_PASSWORD dengan password PostgreSQL di komputer Anda:
 
-.env 
-  # Konfigurasi Database PostgreSQL
+```.env 
+# Konfigurasi Database PostgreSQL
 DB_NAME=aeromiles
 DB_USER=postgres
 DB_PASSWORD=postgres
 DB_HOST=localhost
 DB_PORT=5432
+```
 
-Langkah 5: Migrasi Database Django
+### Langkah 5: Migrasi Database Django
 Jalankan perintah migrasi untuk membuat tabel bawaan Django (seperti tabel session untuk sistem login):
 
-Bash
+```Bash
   python manage.py migrate
+```
   
-Langkah 6: Jalankan Server Lokal
+### Langkah 6: Jalankan Server Lokal
 Mulai jalankan server aplikasi Django:
 
-Bash
+```Bash
   python manage.py runserver
+```
   
-Langkah 7: Akses Aplikasi
+### Langkah 7: Akses Aplikasi
 Aplikasi berhasil dijalankan! Buka browser Anda dan kunjungi tautan berikut:
 http://127.0.0.1:8000/
