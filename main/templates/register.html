@@ -1,0 +1,149 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<style>
+    /* Kustomisasi warna utama AeroMiles */
+    .bg-aeromiles { background-color: #041E42; }
+    .text-aeromiles { color: #041E42; }
+    .btn-aeromiles { 
+        background-color: #041E42; 
+        color: white; 
+    }
+    .btn-aeromiles:hover {
+        background-color: #03142e;
+        color: white;
+    }
+
+    /* Kustomisasi Toggle Role mirip desain */
+    .role-toggle-container {
+        background-color: #f8f9fa;
+        border-radius: 0.5rem;
+        padding: 0.25rem;
+    }
+    .role-toggle .btn-check:checked + .btn {
+        background-color: white;
+        color: #212529;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        font-weight: 600;
+    }
+    .role-toggle .btn {
+        color: #6c757d;
+        border: none;
+        border-radius: 0.375rem;
+        font-weight: 500;
+    }
+</style>
+
+<div class="row justify-content-center mb-5 font-sans">
+    <div class="col-lg-8 col-md-10">
+        
+        <div class="text-center mb-4 mt-3">
+            <div class="d-inline-flex align-items-center justify-content-center bg-aeromiles text-white rounded-3 mb-3" style="width: 56px; height: 56px; font-size: 24px;">
+                ✈
+            </div>
+            <h2 class="fw-bold mb-1">Daftar Akun Baru</h2>
+            <p class="text-secondary">Bergabung dengan program AeroMiles</p>
+        </div>
+
+        <div class="card shadow-sm border-0 rounded-4 p-4 p-md-5">
+            <form action="" method="POST">
+                {% csrf_token %}
+                
+                <div class="mb-4">
+                    <h5 class="fw-bold mb-1" style="font-size: 1.1rem;">Registrasi</h5>
+                    <p class="text-secondary small mb-3">Pilih peran dan lengkapi data Anda</p>
+                    
+                    <div class="role-toggle-container d-flex role-toggle w-100">
+                        <input type="radio" class="btn-check" name="role" id="roleMember" value="Member" autocomplete="off" checked>
+                        <label class="btn w-50 py-2 text-center" for="roleMember">Member</label>
+
+                        <input type="radio" class="btn-check" name="role" id="roleStaf" value="Staf" autocomplete="off">
+                        <label class="btn w-50 py-2 text-center" for="roleStaf">Staf</label>
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label small fw-semibold">Email <span class="text-danger">*</span></label>
+                    <input type="email" class="form-control px-3 py-2" name="email" required>
+                </div>
+
+                <div class="row mb-4">
+                    <div class="col-md-6 mb-3 mb-md-0">
+                        <label class="form-label small fw-semibold">Password <span class="text-danger">*</span></label>
+                        <input type="password" class="form-control px-3 py-2" name="password" required>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small fw-semibold">Konfirmasi Password <span class="text-danger">*</span></label>
+                        <input type="password" class="form-control px-3 py-2" name="confirm_password" required>
+                    </div>
+                </div>
+
+                <hr class="text-black-50 opacity-25 my-4">
+
+                <h5 class="fw-bold mb-4" style="font-size: 1.1rem;">Data Pribadi</h5>
+
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label small fw-semibold">Salutation <span class="text-danger">*</span></label>
+                        <select class="form-select px-3 py-2" name="salutation" required>
+                            <option value="" selected disabled>Pilih</option>
+                            <option value="Mr.">Mr.</option>
+                            <option value="Mrs.">Mrs.</option>
+                            <option value="Ms.">Ms.</option>
+                            <option value="Dr.">Dr.</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="row mb-3">
+                    <div class="col-md-6 mb-3 mb-md-0">
+                        <label class="form-label small fw-semibold">Nama Depan <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control px-3 py-2" name="nama_depan" required>
+                    </div>
+                </div>
+
+                <div class="row mb-3">
+                    <div class="col-md-6 mb-3 mb-md-0">
+                        <label class="form-label small fw-semibold">Nama Belakang <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control px-3 py-2" name="nama_belakang" required>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small fw-semibold">Kewarganegaraan <span class="text-danger">*</span></label>
+                        <select class="form-select px-3 py-2" name="kewarganegaraan" required>
+                            <option value="" selected disabled>Pilih negara</option>
+                            <option value="Indonesia">Indonesia</option>
+                            </select>
+                    </div>
+                </div>
+
+                <div class="row mb-3">
+                    <div class="col-md-6 mb-3 mb-md-0">
+                        <label class="form-label small fw-semibold">Country Code</label>
+                        <select class="form-select px-3 py-2" name="country_code" required>
+                            <option value="+62">+62</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small fw-semibold">Nomor HP <span class="text-danger">*</span></label>
+                        <input type="tel" class="form-control px-3 py-2" name="nomor_hp" required>
+                    </div>
+                </div>
+
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <label class="form-label small fw-semibold">Tanggal Lahir <span class="text-danger">*</span></label>
+                        <input type="date" class="form-control px-3 py-2 text-secondary" name="tanggal_lahir" required>
+                    </div>
+                </div>
+
+                <div class="pt-2">
+                    <button type="submit" class="btn btn-aeromiles w-100 py-3 fw-semibold rounded-3">
+                        Daftar
+                    </button>
+                </div>
+
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock content %}

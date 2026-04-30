@@ -92,3 +92,8 @@ def dashboard_view(request):
                 })
 
     return render(request, 'dashboard.html', context)
+
+def register_view(request):
+    if request.method == 'POST':
+        pass
+    return render(request, 'register.html')

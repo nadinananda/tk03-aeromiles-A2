@@ -1,0 +1,72 @@
+{% extends 'feat_merah/base.html' %}
+
+{% block content %}
+<section class="page-heading">
+    <h1>Dashboard</h1>
+    <p>Selamat datang, <strong>{{ user.name }}</strong></p>
+</section>
+
+{% if user.role == 'Member' %}
+    <section class="summary-grid">
+        <article class="summary-card">
+            <span>Nomor Member</span>
+            <strong>{{ user.member_number }}</strong>
+        </article>
+        <article class="summary-card">
+            <span>Tier</span>
+            <strong>{{ user.tier }}</strong>
+        </article>
+        <article class="summary-card">
+            <span>Total Miles</span>
+            <strong>{{ user.total_miles }}</strong>
+        </article>
+        <article class="summary-card">
+            <span>Award Miles</span>
+            <strong>{{ user.award_miles }}</strong>
+        </article>
+    </section>
+
+    <section class="table-card">
+        <div class="section-title">Transaksi Terbaru</div>
+        <div class="table-responsive">
+            <table class="table align-middle">
+                <thead>
+                    <tr>
+                        <th>Tipe</th>
+                        <th>Waktu</th>
+                        <th class="text-end">Jumlah Miles</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for transaction in transactions %}
+                        <tr>
+                            <td>{{ transaction.type }}</td>
+                            <td>{{ transaction.time }}</td>
+                            <td class="text-end {% if transaction.miles < 0 %}text-danger{% else %}text-success{% endif %}">
+                                {{ transaction.miles }}
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+{% else %}
+    <section class="summary-grid">
+        <article class="summary-card">
+            <span>ID Staf</span>
+            <strong>{{ user.staff_number }}</strong>
+        </article>
+        <article class="summary-card">
+            <span>Maskapai</span>
+            <strong>{{ user.airline }}</strong>
+        </article>
+        {% for stat in staff_stats %}
+            <article class="summary-card">
+                <span>{{ stat.label }}</span>
+                <strong>{{ stat.value }}</strong>
+            </article>
+        {% endfor %}
+    </section>
+{% endif %}
+{% endblock content %}
