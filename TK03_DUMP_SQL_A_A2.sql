@@ -4,7 +4,7 @@
 DROP SCHEMA IF EXISTS aeromiles CASCADE;
 CREATE SCHEMA aeromiles;
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
-SET search_path TO aeromiles;
+SET search_path TO aeromiles, public;
 
 -- ==============================================================================
 -- 2. DDL (DATA DEFINITION LANGUAGE) - CREATE TABLES

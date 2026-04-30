@@ -7,8 +7,8 @@ def login_view(request):
         return redirect('main:dashboard')
 
     context = {
-        'demo_member': 'member01@aeromiles.com / 12345',
-        'demo_staf': 'staf@aeromiles.com / 12345',
+        'demo_member': 'member1@aeromiles.com / hashed_pass_123',
+        'demo_staf': 'staf1@aeromiles.com / hashed_pass_123',
     }
 
     if request.method == 'POST':
