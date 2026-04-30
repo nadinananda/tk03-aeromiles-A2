@@ -1,0 +1,297 @@
+{% extends 'feat_hijau/base.html' %}
+{% block title %}Klaim Missing Miles – AeroMiles{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <div class="page-title mb-0">Klaim Missing Miles</div>
+  <button class="btn btn-primary-aero" data-bs-toggle="modal" data-bs-target="#modalKlaimBaru">
+    <i class="bi bi-plus-lg me-1"></i> Ajukan Klaim
+  </button>
+</div>
+
+<!-- ── FILTER TAB ── -->
+<div class="filter-tabs">
+  <a href="?status=semua"    class="filter-tab {% if status_filter == 'semua' %}active{% endif %}">Semua</a>
+  <a href="?status=menunggu" class="filter-tab {% if status_filter == 'menunggu' %}active{% endif %}">Menunggu</a>
+  <a href="?status=disetujui"class="filter-tab {% if status_filter == 'disetujui' %}active{% endif %}">Disetujui</a>
+  <a href="?status=ditolak"  class="filter-tab {% if status_filter == 'ditolak' %}active{% endif %}">Ditolak</a>
+</div>
+
+<!-- ── TABLE ── -->
+<div class="card-aero">
+  <div class="card-body p-0">
+    <table class="table table-aero mb-0">
+      <thead>
+        <tr>
+          <th>No. Klaim</th>
+          <th>Maskapai</th>
+          <th>Rute</th>
+          <th>Tanggal</th>
+          <th>Flight</th>
+          <th>Kelas</th>
+          <th>Status</th>
+          <th>Tanggal Pengajuan</th>
+          <th>Aksi</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for k in klaim_list %}
+        <tr>
+          <td><strong>CLM-{{ k.id|stringformat:"03d" }}</strong></td>
+          <td>{{ k.maskapai }}</td>
+          <td>{{ k.bandara_asal }} → {{ k.bandara_tujuan }}</td>
+          <td>{{ k.tanggal_penerbangan }}</td>
+          <td>{{ k.flight_number }}</td>
+          <td>{{ k.kelas_kabin }}</td>
+          <td>
+            {% if k.status_penerimaan == 'Menunggu' %}
+              <span class="status-badge badge-menunggu">Menunggu</span>
+            {% elif k.status_penerimaan == 'Disetujui' %}
+              <span class="status-badge badge-disetujui">Disetujui</span>
+            {% else %}
+              <span class="status-badge badge-ditolak">Ditolak</span>
+            {% endif %}
+          </td>
+          <td>{{ k.timestamp|date:"Y-m-d H:i" }}</td>
+          <td>
+            {% if k.status_penerimaan == 'Menunggu' %}
+            <button class="btn-sm-icon btn-edit me-1"
+                    onclick="loadEditKlaim({{ k.id }})"
+                    data-bs-toggle="modal" data-bs-target="#modalEditKlaim"
+                    title="Edit">
+              <i class="bi bi-pencil"></i>
+            </button>
+            <button class="btn-sm-icon btn-del"
+                    onclick="setHapusId({{ k.id }})"
+                    data-bs-toggle="modal" data-bs-target="#modalHapus"
+                    title="Batalkan">
+              <i class="bi bi-trash"></i>
+            </button>
+            {% else %}
+            <span class="text-muted" style="font-size:.8rem"><i class="bi bi-lock"></i></span>
+            {% endif %}
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="9" class="text-center text-muted py-4">
+            <i class="bi bi-inbox" style="font-size:2rem; display:block; margin-bottom:.5rem"></i>
+            Belum ada klaim
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+
+<!-- ── MODAL AJUKAN KLAIM BARU ── -->
+<div class="modal fade" id="modalKlaimBaru" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title"><i class="bi bi-clipboard-plus me-2"></i>Ajukan Klaim Baru</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <form method="POST" action="{% url 'klaim_baru' %}">
+        {% csrf_token %}
+        <div class="modal-body">
+          <div class="row mb-3">
+            <div class="col-md-6">
+              <label class="form-label">Maskapai <span class="text-danger">*</span></label>
+              <select name="maskapai" class="form-select" required>
+                <option value="" disabled selected>Pilih maskapai</option>
+                {% for mk in maskapai_list %}
+                <option value="{{ mk.kode }}">{{ mk.kode }} – {{ mk.nama }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Kelas Kabin <span class="text-danger">*</span></label>
+              <select name="kelas_kabin" class="form-select" required>
+                <option value="" disabled selected>Pilih kelas</option>
+                <option>Economy</option>
+                <option>Premium Economy</option>
+                <option>Business</option>
+                <option>First</option>
+              </select>
+            </div>
+          </div>
+          <div class="row mb-3">
+            <div class="col-md-6">
+              <label class="form-label">Bandara Asal <span class="text-danger">*</span></label>
+              <select name="bandara_asal" class="form-select" required>
+                <option value="" disabled selected>Pilih bandara asal</option>
+                {% for b in bandara_list %}
+                <option value="{{ b.iata }}">{{ b.iata }} – {{ b.nama }}, {{ b.kota }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Bandara Tujuan <span class="text-danger">*</span></label>
+              <select name="bandara_tujuan" class="form-select" required>
+                <option value="" disabled selected>Pilih bandara tujuan</option>
+                {% for b in bandara_list %}
+                <option value="{{ b.iata }}">{{ b.iata }} – {{ b.nama }}, {{ b.kota }}</option>
+                {% endfor %}
+              </select>
+            </div>
+          </div>
+          <div class="row mb-3">
+            <div class="col-md-6">
+              <label class="form-label">Tanggal Penerbangan <span class="text-danger">*</span></label>
+              <input type="date" name="tanggal_penerbangan" class="form-control" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Flight Number <span class="text-danger">*</span></label>
+              <input type="text" name="flight_number" class="form-control" placeholder="Contoh: GA404" required>
+            </div>
+          </div>
+          <div class="row mb-3">
+            <div class="col-md-6">
+              <label class="form-label">Nomor Tiket <span class="text-danger">*</span></label>
+              <input type="text" name="nomor_tiket" class="form-control" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">PNR <span class="text-danger">*</span></label>
+              <input type="text" name="pnr" class="form-control" maxlength="10" required>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
+          <button type="submit" class="btn btn-primary-aero"><i class="bi bi-send me-1"></i> Ajukan</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+
+<!-- ── MODAL EDIT KLAIM ── -->
+<div class="modal fade" id="modalEditKlaim" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title"><i class="bi bi-pencil-square me-2"></i>Edit Klaim</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <form method="POST" id="formEditKlaim">
+        {% csrf_token %}
+        <div class="modal-body">
+          <div class="row mb-3">
+            <div class="col-md-6">
+              <label class="form-label">Maskapai <span class="text-danger">*</span></label>
+              <select name="maskapai" id="edit_maskapai" class="form-select" required>
+                {% for mk in maskapai_list %}
+                <option value="{{ mk.kode }}">{{ mk.kode }} – {{ mk.nama }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Kelas Kabin <span class="text-danger">*</span></label>
+              <select name="kelas_kabin" id="edit_kelas" class="form-select" required>
+                <option>Economy</option>
+                <option>Premium Economy</option>
+                <option>Business</option>
+                <option>First</option>
+              </select>
+            </div>
+          </div>
+          <div class="row mb-3">
+            <div class="col-md-6">
+              <label class="form-label">Bandara Asal <span class="text-danger">*</span></label>
+              <select name="bandara_asal" id="edit_bandara_asal" class="form-select" required>
+                {% for b in bandara_list %}
+                <option value="{{ b.iata }}">{{ b.iata }} – {{ b.nama }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Bandara Tujuan <span class="text-danger">*</span></label>
+              <select name="bandara_tujuan" id="edit_bandara_tujuan" class="form-select" required>
+                {% for b in bandara_list %}
+                <option value="{{ b.iata }}">{{ b.iata }} – {{ b.nama }}</option>
+                {% endfor %}
+              </select>
+            </div>
+          </div>
+          <div class="row mb-3">
+            <div class="col-md-6">
+              <label class="form-label">Tanggal Penerbangan <span class="text-danger">*</span></label>
+              <input type="date" name="tanggal_penerbangan" id="edit_tanggal" class="form-control" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Flight Number <span class="text-danger">*</span></label>
+              <input type="text" name="flight_number" id="edit_flight" class="form-control" required>
+            </div>
+          </div>
+          <div class="row mb-3">
+            <div class="col-md-6">
+              <label class="form-label">Nomor Tiket <span class="text-danger">*</span></label>
+              <input type="text" name="nomor_tiket" id="edit_tiket" class="form-control" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">PNR <span class="text-danger">*</span></label>
+              <input type="text" name="pnr" id="edit_pnr" class="form-control" required>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
+          <button type="submit" class="btn btn-primary-aero"><i class="bi bi-floppy me-1"></i> Simpan</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+
+<!-- ── MODAL KONFIRMASI HAPUS ── -->
+<div class="modal fade" id="modalHapus" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header" style="background:#dc2626;">
+        <h5 class="modal-title"><i class="bi bi-exclamation-triangle me-2"></i>Batalkan Klaim?</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        Klaim akan dihapus secara permanen. Tindakan ini tidak dapat dibatalkan.
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
+        <form method="POST" id="formHapus">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-danger"><i class="bi bi-trash me-1"></i> Hapus</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function loadEditKlaim(id) {
+  fetch(`/klaim/${id}/json/`)
+    .then(r => r.json())
+    .then(d => {
+      document.getElementById('formEditKlaim').action = `/klaim/${id}/edit/`;
+      document.getElementById('edit_maskapai').value = d.maskapai;
+      document.getElementById('edit_kelas').value = d.kelas_kabin;
+      document.getElementById('edit_bandara_asal').value = d.bandara_asal;
+      document.getElementById('edit_bandara_tujuan').value = d.bandara_tujuan;
+      document.getElementById('edit_tanggal').value = d.tanggal_penerbangan;
+      document.getElementById('edit_flight').value = d.flight_number;
+      document.getElementById('edit_tiket').value = d.nomor_tiket;
+      document.getElementById('edit_pnr').value = d.pnr;
+    });
+}
+
+function setHapusId(id) {
+  document.getElementById('formHapus').action = `/klaim/${id}/hapus/`;
+}
+</script>
+{% endblock %}

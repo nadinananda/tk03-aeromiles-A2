@@ -1,0 +1,115 @@
+{% extends 'feat_hijau/base.html' %}
+{% block title %}Transfer Miles – AeroMiles{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <div>
+    <div class="page-title mb-1">Transfer Miles</div>
+    <div class="miles-badge">
+      <i class="bi bi-arrow-left-right me-2"></i>
+      Award Miles tersedia: <strong>{{ award_miles|floatformat:0 }}</strong>
+    </div>
+  </div>
+  <button class="btn btn-primary-aero" data-bs-toggle="modal" data-bs-target="#modalTransferBaru">
+    <i class="bi bi-plus-lg me-1"></i> Transfer Baru
+  </button>
+</div>
+
+<!-- ── RIWAYAT TRANSFER ── -->
+<div class="card-aero mt-3">
+  <div class="card-header"><i class="bi bi-clock-history me-2"></i>Riwayat Transfer</div>
+  <div class="card-body p-0">
+    <table class="table table-aero mb-0">
+      <thead>
+        <tr>
+          <th>Waktu</th>
+          <th>Member</th>
+          <th>Jumlah Miles</th>
+          <th>Catatan</th>
+          <th>Tipe</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for t in transfer_list %}
+        <tr>
+          <td style="white-space:nowrap">{{ t.timestamp|date:"Y-m-d H:i" }}</td>
+          <td>
+            <div style="font-weight:600;color:#1e293b">{{ t.member_lawan }}</div>
+            <div style="font-size:.75rem;color:#64748b">{{ t.email_lawan }}</div>
+          </td>
+          <td>
+            {% if t.tipe == 'Kirim' %}
+              <span class="miles-neg">−{{ t.jumlah|floatformat:0 }}</span>
+            {% else %}
+              <span class="miles-pos">+{{ t.jumlah|floatformat:0 }}</span>
+            {% endif %}
+          </td>
+          <td>{{ t.catatan|default:"–" }}</td>
+          <td>
+            {% if t.tipe == 'Kirim' %}
+              <span class="status-badge" style="background:#fef3c7;color:#92400e;border:1px solid #fcd34d">Kirim</span>
+            {% else %}
+              <span class="status-badge badge-disetujui">Terima</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="5" class="text-center text-muted py-4">
+            <i class="bi bi-inbox" style="font-size:2rem;display:block;margin-bottom:.5rem"></i>
+            Belum ada riwayat transfer
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+
+<!-- ── MODAL TRANSFER BARU ── -->
+<div class="modal fade" id="modalTransferBaru" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title"><i class="bi bi-arrow-left-right me-2"></i>Transfer Miles</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <form method="POST" action="{% url 'transfer_baru' %}" id="formTransfer">
+        {% csrf_token %}
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="form-label">Email Penerima <span class="text-danger">*</span></label>
+            <input type="email" name="email_penerima" class="form-control"
+                   placeholder="email@example.com" required>
+            <div class="form-text">Penerima harus terdaftar sebagai Member aktif.</div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Jumlah Miles <span class="text-danger">*</span></label>
+            <input type="number" name="jumlah" class="form-control"
+                   min="1" max="{{ award_miles }}" required
+                   placeholder="Jumlah miles yang dikirim">
+            <div class="form-text">Maks: {{ award_miles|floatformat:0 }} miles</div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Catatan <span class="text-muted">(opsional)</span></label>
+            <textarea name="catatan" class="form-control" rows="2"
+                      placeholder="Catatan transfer (opsional)"></textarea>
+          </div>
+          <div class="alert alert-warning py-2" style="font-size:.83rem">
+            <i class="bi bi-exclamation-triangle me-1"></i>
+            Transfer bersifat permanen dan tidak dapat dibatalkan.
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
+          <button type="submit" class="btn btn-primary-aero">
+            <i class="bi bi-send me-1"></i> Transfer
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
