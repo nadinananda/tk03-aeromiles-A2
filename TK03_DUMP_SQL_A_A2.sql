@@ -54,12 +54,14 @@ CREATE TABLE MEMBER_AWARD_MILES_PACKAGE (
     PRIMARY KEY (id_award_miles_package, email_member, timestamp)
 );
 
+INSERT INTO TIER (id_tier, nama, minimal_frekuensi_terbang, minimal_tier_miles)
+VALUES ('T001', 'Gold', 100, 50);
 
 INSERT INTO PENGGUNA (email, password, salutation, first_mid_name, last_name, country_code, mobile_number, tanggal_lahir, kewarganegaraan) 
 VALUES ('member@aeromiles.com', '12345', 'Mr.', 'Akun', 'Member', '+62', '0811111111', '2000-01-01', 'Indonesia');
 
 INSERT INTO MEMBER (email, nomor_member, tanggal_bergabung, id_tier, award_miles, total_miles)
-VALUES ('member1@aeromiles.com', 'M9999', '2024-01-01', 'T001', 32000, 45000);
+VALUES ('member@aeromiles.com', 'M9999', '2024-01-01', 'T001', 32000, 45000);
 
 
 INSERT INTO PENGGUNA (email, password, salutation, first_mid_name, last_name, country_code, mobile_number, tanggal_lahir, kewarganegaraan) 
