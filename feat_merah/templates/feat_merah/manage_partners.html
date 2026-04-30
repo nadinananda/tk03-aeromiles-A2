@@ -1,0 +1,209 @@
+{% extends 'feat_merah/base.html' %}
+
+{% block content %}
+<section class="page-heading page-heading-row">
+    <div>
+        <h1>Kelola Mitra</h1>
+        <p>Daftar mitra AeroMiles beserta ID penyedia dan tanggal kerja sama.</p>
+    </div>
+    <button class="btn btn-primary" type="button" id="addPartnerButton">
+        <i class="bi bi-plus-lg me-1"></i>Tambah Mitra
+    </button>
+</section>
+
+<section class="table-card table-card-narrow">
+    <div class="table-responsive">
+        <table class="table align-middle">
+            <thead>
+                <tr>
+                    <th>Email Mitra</th>
+                    <th>ID Penyedia</th>
+                    <th>Nama Mitra</th>
+                    <th>Tanggal Kerja Sama</th>
+                    <th class="text-center">Aksi</th>
+                </tr>
+            </thead>
+            <tbody id="partnerTableBody"></tbody>
+        </table>
+    </div>
+</section>
+
+<div class="modal fade" id="partnerFormModal" tabindex="-1" aria-labelledby="partnerFormTitle" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <form class="modal-content" id="partnerForm">
+            <div class="modal-header border-0 pb-0">
+                <h2 class="modal-title fs-5" id="partnerFormTitle">Tambah Mitra Baru</h2>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row g-3">
+                    <div class="col-md-7">
+                        <label class="form-label" for="partnerEmail">Email Mitra</label>
+                        <input class="form-control" id="partnerEmail" type="email" required>
+                    </div>
+                    <div class="col-md-5">
+                        <label class="form-label" for="partnerProviderId">ID Penyedia</label>
+                        <input class="form-control" id="partnerProviderId" type="text" placeholder="Otomatis" readonly>
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label" for="partnerName">Nama Mitra</label>
+                        <input class="form-control" id="partnerName" type="text" required>
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label" for="partnerCooperationDate">Tanggal Kerja Sama</label>
+                        <input class="form-control" id="partnerCooperationDate" type="date" required>
+                    </div>
+                </div>
+                <div class="small text-danger d-none mt-3" id="partnerFormFeedback"></div>
+            </div>
+            <div class="modal-footer border-0">
+                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Batal</button>
+                <button type="submit" class="btn btn-primary">Simpan</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="modal fade" id="deletePartnerModal" tabindex="-1" aria-labelledby="deletePartnerTitle" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header border-0 pb-0">
+                <h2 class="modal-title fs-5" id="deletePartnerTitle">Hapus Mitra?</h2>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup"></button>
+            </div>
+            <div class="modal-body">
+                <p class="mb-0">Penghapusan mitra akan berpengaruh pada hadiah yang disediakan oleh mitra ini.</p>
+            </div>
+            <div class="modal-footer border-0">
+                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Batal</button>
+                <button type="button" class="btn btn-primary" id="confirmDeletePartner">Hapus</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{{ partners|json_script:"partner-data" }}
+{{ next_provider_id|json_script:"next-provider-id-data" }}
+{% endblock content %}
+
+{% block scripts %}
+<script>
+    const partners = JSON.parse(document.getElementById("partner-data").textContent);
+    let nextProviderId = Number(JSON.parse(document.getElementById("next-provider-id-data").textContent));
+    let editingEmail = null;
+    let deletingEmail = null;
+
+    const partnerTableBody = document.getElementById("partnerTableBody");
+    const partnerForm = document.getElementById("partnerForm");
+    const partnerModal = new bootstrap.Modal(document.getElementById("partnerFormModal"));
+    const deletePartnerModal = new bootstrap.Modal(document.getElementById("deletePartnerModal"));
+    const partnerFeedback = document.getElementById("partnerFormFeedback");
+
+    function escapeHtml(value) {
+        return String(value)
+            .replaceAll("&", "&amp;")
+            .replaceAll("<", "&lt;")
+            .replaceAll(">", "&gt;")
+            .replaceAll('"', "&quot;")
+            .replaceAll("'", "&#039;");
+    }
+
+    function renderPartners() {
+        partnerTableBody.innerHTML = "";
+
+        partners.forEach((partner) => {
+            const row = document.createElement("tr");
+            row.innerHTML = `
+                <td><strong>${escapeHtml(partner.email)}</strong></td>
+                <td>${escapeHtml(partner.provider_id)}</td>
+                <td>${escapeHtml(partner.name)}</td>
+                <td>${escapeHtml(partner.cooperation_date)}</td>
+                <td class="text-center">
+                    <button class="icon-button" type="button" data-edit="${escapeHtml(partner.email)}" title="Edit mitra" aria-label="Edit mitra">
+                        <i class="bi bi-pencil-fill"></i>
+                    </button>
+                    <button class="icon-button danger" type="button" data-delete="${escapeHtml(partner.email)}" title="Hapus mitra" aria-label="Hapus mitra">
+                        <i class="bi bi-trash-fill"></i>
+                    </button>
+                </td>
+            `;
+            partnerTableBody.appendChild(row);
+        });
+    }
+
+    function openPartnerForm(partner = null) {
+        partnerForm.reset();
+        partnerFeedback.classList.add("d-none");
+        editingEmail = partner ? partner.email : null;
+
+        document.getElementById("partnerFormTitle").textContent = partner ? "Edit Mitra" : "Tambah Mitra Baru";
+        document.getElementById("partnerEmail").readOnly = Boolean(partner);
+        document.getElementById("partnerEmail").value = partner ? partner.email : "";
+        document.getElementById("partnerProviderId").value = partner ? partner.provider_id : "";
+        document.getElementById("partnerName").value = partner ? partner.name : "";
+        document.getElementById("partnerCooperationDate").value = partner ? partner.cooperation_date : "";
+
+        partnerModal.show();
+    }
+
+    document.getElementById("addPartnerButton").addEventListener("click", () => openPartnerForm());
+
+    partnerTableBody.addEventListener("click", (event) => {
+        const editButton = event.target.closest("[data-edit]");
+        const deleteButton = event.target.closest("[data-delete]");
+
+        if (editButton) {
+            const partner = partners.find((item) => item.email === editButton.dataset.edit);
+            openPartnerForm(partner);
+        }
+
+        if (deleteButton) {
+            deletingEmail = deleteButton.dataset.delete;
+            deletePartnerModal.show();
+        }
+    });
+
+    partnerForm.addEventListener("submit", (event) => {
+        event.preventDefault();
+
+        const email = document.getElementById("partnerEmail").value.trim().toLowerCase();
+        const duplicate = partners.some((partner) => partner.email === email && partner.email !== editingEmail);
+
+        if (duplicate) {
+            partnerFeedback.textContent = "Email mitra sudah terdaftar.";
+            partnerFeedback.classList.remove("d-none");
+            return;
+        }
+
+        const payload = {
+            email,
+            provider_id: editingEmail
+                ? Number(document.getElementById("partnerProviderId").value)
+                : nextProviderId++,
+            name: document.getElementById("partnerName").value.trim(),
+            cooperation_date: document.getElementById("partnerCooperationDate").value,
+        };
+
+        if (editingEmail) {
+            const index = partners.findIndex((partner) => partner.email === editingEmail);
+            partners[index] = payload;
+        } else {
+            partners.push(payload);
+        }
+
+        renderPartners();
+        partnerModal.hide();
+    });
+
+    document.getElementById("confirmDeletePartner").addEventListener("click", () => {
+        const index = partners.findIndex((partner) => partner.email === deletingEmail);
+        if (index >= 0) {
+            partners.splice(index, 1);
+            renderPartners();
+        }
+        deletePartnerModal.hide();
+    });
+
+    renderPartners();
+</script>
+{% endblock scripts %}

@@ -42,36 +42,54 @@ def dashboard_view(request):
     email_user = request.session.get('email')
     role_user = request.session.get('role')
 
-    context = {
-        'nama': 'Mr. Juma Jordan Bimo', 
-        'email': email_user,
-        'telepon': '+62 81234567890',
-        'kewarganegaraan': 'Indonesia',
-        'tanggal_lahir': '2006-06-25',
-        'role': role_user,
-    }
+    with connection.cursor() as cursor:
+        # Ambil data dari PENGGUNA
+        cursor.execute("""
+            SELECT salutation, first_mid_name, last_name, mobile_number, kewarganegaraan, tanggal_lahir 
+            FROM PENGGUNA WHERE email = %s
+        """, [email_user])
+        user_data = cursor.fetchone()
+        
+        nama = f"{user_data[0]} {user_data[1]} {user_data[2]}" if user_data else 'N/A'
+        
+        context = {
+            'nama': nama,
+            'email': email_user,
+            'telepon': user_data[3] if user_data else 'N/A',
+            'kewarganegaraan': user_data[4] if user_data else 'N/A',
+            'tanggal_lahir': user_data[5] if user_data else 'N/A',
+            'role': role_user,
+        }
 
-    if role_user == 'Member':
-        context.update({
-            'nomor_member': 'M0001',
-            'tier': 'Gold',
-            'total_miles': '45,000',
-            'award_miles': '32,000',
-            'tanggal_bergabung': '2024-01-15',
-            'transaksi': [
-                {'tipe': 'Transfer', 'waktu': '2025-01-15 10:30', 'jumlah': '-5,000'},
-                {'tipe': 'Redeem', 'waktu': '2025-01-20 16:00', 'jumlah': '-3,000'},
-                {'tipe': 'Package', 'waktu': '2025-03-01 08:00', 'jumlah': '+10,000'},
-            ]
-        })
-    elif role_user == 'Staf':
-        context.update({
-            'id_staf': 'S0001',
-            'maskapai': 'Garuda Indonesia',
-            'klaim_menunggu': 2,
-            'klaim_disetujui': 1,
-            'klaim_ditolak': 1,
-        })
+        if role_user == 'Member':
+            cursor.execute("""
+                SELECT m.nomor_member, t.nama, m.total_miles, m.award_miles, m.tanggal_bergabung
+                FROM MEMBER m
+                JOIN TIER t ON m.id_tier = t.id_tier
+                WHERE m.email = %s
+            """, [email_user])
+            member_data = cursor.fetchone()
+            
+            if member_data:
+                context.update({
+                    'nomor_member': member_data[0],
+                    'tier': member_data[1],
+                    'total_miles': member_data[2],
+                    'award_miles': member_data[3],
+                    'tanggal_bergabung': member_data[4],
+                })
+
+        elif role_user == 'Staf':
+            cursor.execute("""
+                SELECT nomor_staf
+                FROM STAF WHERE email = %s
+            """, [email_user])
+            staf_data = cursor.fetchone()
+            
+            if staf_data:
+                context.update({
+                    'nomor_staf': staf_data[0],
+                })
 
     return render(request, 'dashboard.html', context)
 
