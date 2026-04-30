@@ -22,5 +22,6 @@ urlpatterns = [
     path('', include('feat_merah.urls')), 
     path('', include('feat_biru.urls')), 
     path('', include('main.urls')),
+    path('', include('feat_hijau.urls')),
     path('kuning/', include('feat_kuning.urls')),
 ]

@@ -1,0 +1,149 @@
+{% extends 'feat_hijau/base.html' %}
+{% block title %}Pengaturan Profil – AeroMiles{% endblock %}
+
+{% block content %}
+<div class="page-title">Pengaturan Profil</div>
+
+<!-- ── DATA PROFIL ── -->
+<div class="card-aero mb-4">
+  <div class="card-header"><i class="bi bi-person-circle me-2"></i>Data Profil</div>
+  <div class="card-body p-4">
+    <form method="POST" action="{% url 'pengaturan_profil' %}">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="update_profil">
+
+      <!-- Read-only: Email -->
+      <div class="mb-3">
+        <label class="form-label">Email</label>
+        <input type="text" class="form-control" value="{{ pengguna.email }}" readonly disabled>
+      </div>
+
+      {% if role == 'member' %}
+      <div class="row mb-3">
+        <div class="col-md-6">
+          <label class="form-label">Nomor Member</label>
+          <input type="text" class="form-control" value="{{ extra.nomor_member }}" readonly disabled>
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">Tanggal Bergabung</label>
+          <input type="text" class="form-control" value="{{ extra.tanggal_bergabung }}" readonly disabled>
+        </div>
+      </div>
+      {% elif role == 'staf' %}
+      <div class="mb-3">
+        <label class="form-label">ID Staf</label>
+        <input type="text" class="form-control" value="{{ extra.id_staf }}" readonly disabled>
+      </div>
+      {% endif %}
+
+      <div class="form-section-title mt-3">Data Pribadi</div>
+
+      <!-- Salutation -->
+      <div class="mb-3">
+        <label class="form-label">Salutation <span class="text-danger">*</span></label>
+        <select name="salutation" class="form-select" required>
+          {% for s in 'Mr.,Mrs.,Ms.,Dr.'|split:',' %}
+          <option value="{{ s }}" {% if pengguna.salutation == s %}selected{% endif %}>{{ s }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="row mb-3">
+        <div class="col-md-4">
+          <label class="form-label">Nama Depan &amp; Tengah <span class="text-danger">*</span></label>
+          <input type="text" name="first_mid_name" class="form-control" value="{{ pengguna.first_mid_name }}" required>
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Nama Belakang <span class="text-danger">*</span></label>
+          <input type="text" name="last_name" class="form-control" value="{{ pengguna.last_name }}" required>
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Kewarganegaraan <span class="text-danger">*</span></label>
+          <input type="text" name="kewarganegaraan" class="form-control" value="{{ pengguna.kewarganegaraan }}" required>
+        </div>
+      </div>
+
+      <div class="row mb-3">
+        <div class="col-md-3">
+          <label class="form-label">Country Code <span class="text-danger">*</span></label>
+          <select name="country_code" class="form-select" required>
+            {% for cc in '+62,+1,+44,+65,+81,+82,+60,+66,+84,+61,+49,+33,+86'|split:',' %}
+            <option value="{{ cc }}" {% if pengguna.country_code == cc %}selected{% endif %}>{{ cc }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-md-5">
+          <label class="form-label">Nomor HP <span class="text-danger">*</span></label>
+          <input type="text" name="mobile_number" class="form-control" value="{{ pengguna.mobile_number }}" required>
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Tanggal Lahir <span class="text-danger">*</span></label>
+          <input type="date" name="tanggal_lahir" class="form-control" value="{{ pengguna.tanggal_lahir }}" required>
+        </div>
+      </div>
+
+      {% if role == 'staf' %}
+      <div class="form-section-title mt-3">Data Staf</div>
+      <div class="mb-3">
+        <label class="form-label">Kode Maskapai <span class="text-danger">*</span></label>
+        <select name="kode_maskapai" class="form-select" required>
+          {% for mk in maskapai_list %}
+          <option value="{{ mk.kode }}" {% if extra.kode_maskapai == mk.kode %}selected{% endif %}>
+            {{ mk.kode }} – {{ mk.nama }}
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+      {% endif %}
+
+      <button type="submit" class="btn btn-primary-aero">
+        <i class="bi bi-floppy me-1"></i> Simpan Perubahan
+      </button>
+    </form>
+  </div>
+</div>
+
+<!-- ── UBAH PASSWORD ── -->
+<div class="card-aero">
+  <div class="card-header"><i class="bi bi-key me-2"></i>Ubah Password</div>
+  <div class="card-body p-4">
+    <button class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#modalPassword">
+      <i class="bi bi-key me-1"></i> Ubah Password
+    </button>
+  </div>
+</div>
+
+<!-- ── MODAL UBAH PASSWORD ── -->
+<div class="modal fade" id="modalPassword" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title"><i class="bi bi-key me-2"></i>Ubah Password</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <form method="POST" action="{% url 'pengaturan_profil' %}">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="ubah_password">
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="form-label">Password Lama <span class="text-danger">*</span></label>
+            <input type="password" name="password_lama" class="form-control" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Password Baru <span class="text-danger">*</span></label>
+            <input type="password" name="password_baru" class="form-control" required minlength="8">
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Konfirmasi Password Baru <span class="text-danger">*</span></label>
+            <input type="password" name="konfirmasi_password_baru" class="form-control" required minlength="8">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
+          <button type="submit" class="btn btn-primary-aero"><i class="bi bi-floppy me-1"></i> Simpan</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
