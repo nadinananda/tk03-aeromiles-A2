@@ -114,14 +114,14 @@ def dashboard_view(request):
 
         elif role_user == 'Staf':
             cursor.execute("""
-                SELECT nomor_staf
+                SELECT id_staf
                 FROM STAF WHERE email = %s
             """, [email_user])
             staf_data = cursor.fetchone()
             
             if staf_data:
                 context.update({
-                    'nomor_staf': staf_data[0],
+                    'id_staf': staf_data[0],
                 })
 
     return render(request, 'main/dashboard.html', context)

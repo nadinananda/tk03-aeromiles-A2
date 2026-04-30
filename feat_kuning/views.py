@@ -66,4 +66,4 @@ def kelola_member_view(request):
     ]
     
     context = {'member_list': member_data}
-    return render(request, 'feat_kuning/kelola_member.html', context)
+    return render(request, 'kelola_member.html', context)
