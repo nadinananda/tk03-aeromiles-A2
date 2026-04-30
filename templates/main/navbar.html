@@ -1,45 +1,45 @@
-<nav class="navbar navbar-expand-lg navbar-dark bg-primary mb-4">
-    <div class="container">
-        <a class="navbar-brand" href="{% url 'main:dashboard' %}">
-            <i class="bi bi-airplane-fill me-2"></i>AeroMiles
-        </a>
-        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-            <span class="navbar-toggler-icon"></span>
-        </button>
-        
-        <div class="collapse navbar-collapse" id="navbarNav">
-            <ul class="navbar-nav me-auto">
-                {% if not request.session.email %}
-                    <li class="nav-item"><a class="nav-link" href="{% url 'main:login' %}"><i class="bi bi-box-arrow-in-right me-1"></i>Login</a></li>
-                    <li class="nav-item"><a class="nav-link" href="{% url 'main:register' %}"><i class="bi bi-person-plus me-1"></i>Registrasi</a></li>
-                
-                {% elif request.session.role == 'Member' %}
-                    <li class="nav-item"><a class="nav-link" href="{% url 'main:dashboard' %}"><i class="bi bi-grid me-1"></i>Dashboard</a></li>
-                    <li class="nav-item"><a class="nav-link" href="#"><i class="bi bi-person-badge me-1"></i>Identitas Saya</a></li>
-                    <li class="nav-item"><a class="nav-link" href="#"><i class="bi bi-clipboard-check me-1"></i>Klaim Miles</a></li>
-                    <li class="nav-item"><a class="nav-link" href="#"><i class="bi bi-arrow-left-right me-1"></i>Transfer Miles</a></li>
-                    <li class="nav-item"><a class="nav-link" href="#"><i class="bi bi-gift me-1"></i>Redeem Hadiah</a></li>
-                    <li class="nav-item"><a class="nav-link" href="#"><i class="bi bi-bag-plus me-1"></i>Beli Package</a></li>
-                    <li class="nav-item"><a class="nav-link" href="#"><i class="bi bi-star me-1"></i>Info Tier</a></li>
-                    <li class="nav-item"><a class="nav-link" href="#"><i class="bi bi-gear me-1"></i>Pengaturan Profil</a></li>
-                
-                {% elif request.session.role == 'Staf' %}
-                    <li class="nav-item"><a class="nav-link" href="{% url 'main:dashboard' %}"><i class="bi bi-grid me-1"></i>Dashboard</a></li>
-                    <li class="nav-item"><a class="nav-link" href="#"><i class="bi bi-people me-1"></i>Kelola Member</a></li>
-                    <li class="nav-item"><a class="nav-link" href="#"><i class="bi bi-card-checklist me-1"></i>Kelola Klaim</a></li>
-                    <li class="nav-item"><a class="nav-link" href="#"><i class="bi bi-box-seam me-1"></i>Kelola Hadiah & Penyedia</a></li>
-                    <li class="nav-item"><a class="nav-link" href="#"><i class="bi bi-buildings me-1"></i>Kelola Mitra</a></li>
-                    <li class="nav-item"><a class="nav-link" href="#"><i class="bi bi-receipt me-1"></i>Laporan Transaksi</a></li>
-                    <li class="nav-item"><a class="nav-link" href="#"><i class="bi bi-gear me-1"></i>Pengaturan Profil</a></li>
-                {% endif %}
-            </ul>
-            
-            {% if request.session.email %}
-            <div class="d-flex align-items-center gap-3">
-                <span class="text-light small">Masuk sebagai {{ request.session.email }} - {{ request.session.role }}</span>
-                <a href="{% url 'main:logout' %}" class="btn btn-sm btn-danger text-white"><i class="bi bi-box-arrow-right me-1"></i>Logout</a>
-            </div>
-            {% endif %}
-        </div>
+<!-- ── NAVBAR ── -->
+<nav class="navbar navbar-expand-lg navbar-aeromiles">
+  <div class="container-fluid">
+    <a class="navbar-brand" href="{% url 'main:dashboard' %}">
+      <i class="bi bi-airplane-fill"></i> AeroMiles
+    </a>
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNav">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+    <div class="collapse navbar-collapse" id="mainNav">
+      {% if request.session.role == 'Member' %}
+      <ul class="navbar-nav me-auto">
+        <li class="nav-item"><a class="nav-link {% if active_page == 'dashboard' %}active{% endif %}" href="{% url 'main:dashboard' %}"><i class="bi bi-grid-fill"></i> Dashboard</a></li>
+        <li class="nav-item"><a class="nav-link {% if active_page == 'identitas' %}active{% endif %}" href="#"><i class="bi bi-person-badge"></i> Identitas Saya</a></li>
+        <li class="nav-item"><a class="nav-link {% if active_page == 'klaim_miles' %}active{% endif %}" href="#"><i class="bi bi-clipboard-check"></i> Klaim Miles</a></li>
+        <li class="nav-item"><a class="nav-link {% if active_page == 'transfer_miles' %}active{% endif %}" href="#"><i class="bi bi-arrow-left-right"></i> Transfer Miles</a></li>
+        <li class="nav-item"><a class="nav-link {% if active_page == 'redeem' %}active{% endif %}" href="#"><i class="bi bi-gift"></i> Redeem Hadiah</a></li>
+        <li class="nav-item"><a class="nav-link {% if active_page == 'beli_package' %}active{% endif %}" href="#"><i class="bi bi-cart"></i> Beli Package</a></li>
+        <li class="nav-item"><a class="nav-link {% if active_page == 'info_tier' %}active{% endif %}" href="#"><i class="bi bi-trophy"></i> Info Tier</a></li>
+        <li class="nav-item"><a class="nav-link {% if active_page == 'pengaturan_profil' %}active{% endif %}" href="#"><i class="bi bi-gear"></i> Pengaturan Profil</a></li>
+      </ul>
+      {% elif request.session.role == 'Staf' %}
+      <ul class="navbar-nav me-auto">
+        <li class="nav-item"><a class="nav-link {% if active_page == 'dashboard' %}active{% endif %}" href="{% url 'main:dashboard' %}"><i class="bi bi-grid-fill"></i> Dashboard</a></li>
+        <li class="nav-item"><a class="nav-link {% if active_page == 'kelola_member' %}active{% endif %}" href="#"><i class="bi bi-people"></i> Kelola Member</a></li>
+        <li class="nav-item"><a class="nav-link {% if active_page == 'kelola_klaim' %}active{% endif %}" href="#"><i class="bi bi-clipboard2-check"></i> Kelola Klaim</a></li>
+        <li class="nav-item"><a class="nav-link {% if active_page == 'kelola_hadiah' %}active{% endif %}" href="#"><i class="bi bi-gift"></i> Kelola Hadiah & Penyedia</a></li>
+        <li class="nav-item"><a class="nav-link {% if active_page == 'kelola_mitra' %}active{% endif %}" href="#"><i class="bi bi-building"></i> Kelola Mitra</a></li>
+        <li class="nav-item"><a class="nav-link {% if active_page == 'laporan' %}active{% endif %}" href="#"><i class="bi bi-bar-chart"></i> Laporan Transaksi</a></li>
+        <li class="nav-item"><a class="nav-link {% if active_page == 'pengaturan_profil' %}active{% endif %}" href="#"><i class="bi bi-gear"></i> Pengaturan Profil</a></li>
+      </ul>
+      {% endif %}
+      <ul class="navbar-nav ms-auto">
+        <li class="nav-item">
+          <a class="nav-link btn-logout ms-2" href="{% url 'main:logout' %}"><i class="bi bi-box-arrow-right"></i> Logout</a>
+        </li>
+      </ul>
     </div>
+  </div>
 </nav>
+{% if request.session.email %}
+<div class="navbar-sub">
+  Masuk sebagai <strong>{{ request.session.nama_lengkap }}</strong> &mdash; {{ request.session.role|title }}
+</div>
+{% endif %}

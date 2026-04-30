@@ -1,4 +1,4 @@
-{% extends 'feat_hijau/base.html' %}
+{% extends 'base.html' %}
 {% block title %}Klaim Missing Miles – AeroMiles{% endblock %}
 
 {% block content %}
@@ -94,7 +94,7 @@
         <h5 class="modal-title"><i class="bi bi-clipboard-plus me-2"></i>Ajukan Klaim Baru</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
-      <form method="POST" action="{% url 'klaim_baru' %}">
+      <form method="POST" action="{% url 'feat_hijau:klaim_baru' %}">
         {% csrf_token %}
         <div class="modal-body">
           <div class="row mb-3">

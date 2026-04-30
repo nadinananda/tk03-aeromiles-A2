@@ -22,7 +22,7 @@ def member_required(view_func):
     def wrapper(request, *args, **kwargs):
         if 'email' not in request.session:
             return redirect('main:login')
-        if request.session.get('role') != 'member':
+        if request.session.get('role') != 'Member':
             return redirect('main:dashboard')
         return view_func(request, *args, **kwargs)
     wrapper.__name__ = view_func.__name__
@@ -32,7 +32,7 @@ def staf_required(view_func):
     def wrapper(request, *args, **kwargs):
         if 'email' not in request.session:
             return redirect('main:login')
-        if request.session.get('role') != 'staf':
+        if request.session.get('role') != 'Staf':
             return redirect('main:dashboard')
         return view_func(request, *args, **kwargs)
     wrapper.__name__ = view_func.__name__
@@ -133,8 +133,12 @@ def pengaturan_profil(request):
         'role': role,
         'maskapai_list': maskapai_list,
         'active_page': 'pengaturan_profil',
+        'salutation_list': ['Mr.', 'Mrs.', 'Ms.', 'Dr.'],
+        'country_code_list': ['+62', '+1', '+44', '+65', '+81', '+82', '+60', '+66', '+84', '+61', '+49', '+33', '+86'],
     }
-    return render(request, 'feat_hijau/pengaturan_profil.html', context)
+    
+    
+    return render(request, 'pengaturan_profil.html', context)
 
 @member_required
 def klaim_miles(request):
@@ -173,7 +177,7 @@ def klaim_miles(request):
         'status_filter': status_filter,
         'active_page': 'klaim_miles',
     }
-    return render(request, 'feat_hijau/klaim_miles.html', context)
+    return render(request, 'klaim_miles.html', context)
 
 @member_required
 def klaim_baru(request):
@@ -429,7 +433,7 @@ def transfer_miles(request):
         'award_miles': award_miles,
         'active_page': 'transfer_miles',
     }
-    return render(request, 'feat_hijau/transfer_miles.html', context)
+    return render(request, 'transfer_miles.html', context)
 
 
 @member_required

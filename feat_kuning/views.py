@@ -32,7 +32,7 @@ def identitas_member_view(request):
     ]
     
     context = {'identitas_list': identitas_data}
-    return render(request, 'feat_kuning/identitas_member.html', context)
+    return render(request, 'identitas_member.html', context)
 
 def kelola_member_view(request):
     if 'email' not in request.session:
