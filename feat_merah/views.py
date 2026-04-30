@@ -2,7 +2,6 @@ from datetime import date
 from django.shortcuts import redirect, render
 from django.db import connection
 
-
 def _current_user(request):
     email = request.COOKIES.get("aero_email")
     if not email:

@@ -347,7 +347,7 @@ def kelola_klaim(request):
         'tanggal_sampai': tanggal_sampai,
         'active_page': 'kelola_klaim',
     }
-    return render(request, 'feat_hijau/kelola_klaim.html', context)
+    return render(request, 'kelola_klaim.html', context)
 
 @staf_required
 @require_POST
