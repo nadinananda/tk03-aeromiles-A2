@@ -64,7 +64,9 @@ ROOT_URLCONF = 'aeromiles.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': [
+            BASE_DIR / 'templates', 
+        ],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -90,6 +92,9 @@ DATABASES = {
         'PASSWORD': os.getenv('DB_PASSWORD', 'postgres'),
         'HOST': os.getenv('DB_HOST', 'localhost'),
         'PORT': os.getenv('DB_PORT', '5432'),
+        'OPTIONS': {
+            'options': '-c search_path=aeromiles,public'
+        }
     }
 }
 

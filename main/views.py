@@ -1,16 +1,25 @@
 from django.shortcuts import render, redirect
 from django.db import connection
+from datetime import date
 
 def login_view(request):
     if 'email' in request.session:
         return redirect('main:dashboard')
 
+    context = {
+        'demo_member': 'member01@aeromiles.com / 12345',
+        'demo_staf': 'staf@aeromiles.com / 12345',
+    }
+
     if request.method == 'POST':
-        email = request.POST.get('email')
-        password = request.POST.get('password')
+        email = request.POST.get('email', '').strip().lower()
+        password = request.POST.get('password', '')
 
         with connection.cursor() as cursor:
-            cursor.execute("SELECT email FROM PENGGUNA WHERE email = %s AND password = %s", [email, password])
+            cursor.execute(
+                "SELECT email FROM PENGGUNA WHERE email = %s AND password = %s", 
+                [email, password]
+            )
             user = cursor.fetchone()
 
             if user:
@@ -27,13 +36,22 @@ def login_view(request):
                     request.session['role'] = 'Staf'
                 return redirect('main:dashboard')
             else:
-                return render(request, 'login.html', {'error': 'Email atau Password salah!'})
+                context.update({
+                    'error': 'Email atau Password salah!',
+                    'email_value': email,
+                })
 
-    return render(request, 'login.html')
+    return render(request, 'main/login.html', context)
 
 def logout_view(request):
-    request.session.flush() 
-    return redirect('main:login')
+    email = request.session.get('email')
+    request.session.flush()
+    
+    context = {
+        'email': email,
+        'logout_time': date.today().strftime('%d %B %Y')
+    }
+    return render(request, 'main/logout.html', context)
 
 def dashboard_view(request):
     if 'email' not in request.session:
@@ -43,7 +61,6 @@ def dashboard_view(request):
     role_user = request.session.get('role')
 
     with connection.cursor() as cursor:
-        # Ambil data dari PENGGUNA
         cursor.execute("""
             SELECT salutation, first_mid_name, last_name, mobile_number, kewarganegaraan, tanggal_lahir 
             FROM PENGGUNA WHERE email = %s
@@ -78,6 +95,22 @@ def dashboard_view(request):
                     'award_miles': member_data[3],
                     'tanggal_bergabung': member_data[4],
                 })
+                
+                try:
+                    cursor.execute("""
+                        SELECT h.nama, r.timestamp 
+                        FROM REDEEM r
+                        JOIN HADIAH h ON r.kode_hadiah = h.kode_hadiah
+                        WHERE r.email_member = %s
+                        ORDER BY r.timestamp DESC LIMIT 5
+                    """, [email_user])
+                    transaksi = cursor.fetchall()
+                    context['transaksi'] = [
+                        {'nama': t[0], 'waktu': t[1]}
+                        for t in transaksi
+                    ]
+                except Exception as e:
+                    context['transaksi'] = []
 
         elif role_user == 'Staf':
             cursor.execute("""
@@ -91,9 +124,9 @@ def dashboard_view(request):
                     'nomor_staf': staf_data[0],
                 })
 
-    return render(request, 'dashboard.html', context)
+    return render(request, 'main/dashboard.html', context)
 
 def register_view(request):
     if request.method == 'POST':
         pass
-    return render(request, 'register.html')
+    return render(request, 'main/register.html')

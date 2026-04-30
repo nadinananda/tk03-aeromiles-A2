@@ -1,103 +1,6 @@
 from datetime import date
-
 from django.shortcuts import redirect, render
-
-
-DEMO_ACCOUNTS = {
-    "member@aeromiles.com": {
-        "password": "12345",
-        "role": "Member",
-        "name": "Mr. John Doe",
-        "award_miles": 32000,
-        "total_miles": 45000,
-        "tier": "Gold",
-        "member_number": "M9999",
-    },
-    "staf@aeromiles.com": {
-        "password": "12345",
-        "role": "Staf",
-        "name": "Mr. Admin Aero",
-        "staff_number": "S9999",
-        "airline": "Garuda Indonesia",
-    },
-}
-
-PROVIDERS = [
-    {"id": 1, "name": "Garuda Indonesia", "category": "airline"},
-    {"id": 2, "name": "TravelokaPartner", "category": "partner"},
-    {"id": 3, "name": "Plaza Premium", "category": "partner"},
-    {"id": 4, "name": "BlueSky Hotel", "category": "partner"},
-    {"id": 5, "name": "AeroShop", "category": "partner"},
-]
-
-REWARDS = [
-    {
-        "code": "RWD-001",
-        "name": "Tiket Domestik PP",
-        "description": "Tiket pulang-pergi rute domestik Indonesia.",
-        "provider_id": 1,
-        "miles": 15000,
-        "valid_start": "2026-01-01",
-        "program_end": "2026-12-31",
-    },
-    {
-        "code": "RWD-002",
-        "name": "Upgrade ke Business Class",
-        "description": "Upgrade dari economy class ke business class.",
-        "provider_id": 1,
-        "miles": 25000,
-        "valid_start": "2026-01-01",
-        "program_end": "2027-01-01",
-    },
-    {
-        "code": "RWD-003",
-        "name": "Voucher Hotel Rp 500.000",
-        "description": "Voucher hotel jaringan mitra AeroMiles.",
-        "provider_id": 2,
-        "miles": 8000,
-        "valid_start": "2026-02-01",
-        "program_end": "2026-09-30",
-    },
-    {
-        "code": "RWD-004",
-        "name": "Akses Lounge 1x",
-        "description": "Akses lounge sebelum keberangkatan untuk satu orang.",
-        "provider_id": 3,
-        "miles": 3000,
-        "valid_start": "2024-01-01",
-        "program_end": "2025-12-31",
-    },
-    {
-        "code": "RWD-005",
-        "name": "Extra Baggage 10kg",
-        "description": "Tambahan bagasi 10kg untuk penerbangan domestik.",
-        "provider_id": 1,
-        "miles": 6000,
-        "valid_start": "2026-03-01",
-        "program_end": "2026-11-30",
-    },
-]
-
-PARTNERS = [
-    {
-        "email": "partner@traveloka.com",
-        "provider_id": 2,
-        "name": "TravelokaPartner",
-        "cooperation_date": "2023-01-15",
-    },
-    {
-        "email": "partner@plazapremium.com",
-        "provider_id": 3,
-        "name": "Plaza Premium",
-        "cooperation_date": "2023-06-01",
-    },
-    {
-        "email": "partner@blueskyhotel.com",
-        "provider_id": 4,
-        "name": "BlueSky Hotel",
-        "cooperation_date": "2024-03-12",
-    },
-]
+from django.db import connection
 
 
 def _current_user(request):
@@ -115,8 +18,8 @@ def _current_user(request):
 
 
 def _require_login(request):
-    if not _current_user(request):
-        return redirect("feat_merah:login")
+    if 'email' not in request.session:
+        return redirect('main:login')
     return None
 
 
@@ -124,10 +27,9 @@ def _require_role(request, role):
     login_redirect = _require_login(request)
     if login_redirect:
         return login_redirect
-
-    current_user = _current_user(request)
-    if current_user["role"] != role:
-        return redirect("feat_merah:dashboard")
+    
+    if request.session.get('role') != role:
+        return redirect('main:dashboard')
     return None
 
 
@@ -224,25 +126,65 @@ def dashboard_view(request):
 
 
 def manage_rewards_view(request):
-    role_redirect = _require_role(request, "Staf")
+    role_redirect = _require_role(request, 'Staf')
     if role_redirect:
         return role_redirect
 
+    email_user = request.session.get('email')
+    
+    with connection.cursor() as cursor:
+        # Ambil semua hadiah dengan info penyedia
+        cursor.execute("""
+            SELECT h.kode_hadiah, h.nama, h.miles, h.deskripsi, 
+                   h.valid_start_date, h.program_end, m.nama_mitra
+            FROM HADIAH h
+            LEFT JOIN PENYEDIA p ON h.id_penyedia = p.id
+            LEFT JOIN MITRA m ON p.id = m.id_penyedia
+            ORDER BY h.program_end DESC
+        """)
+        hadiah_list = cursor.fetchall()
+        
+        hadiah_data = [
+            {
+                'kode': h[0],
+                'nama': h[1],
+                'miles': h[2],
+                'deskripsi': h[3],
+                'valid_start': h[4],
+                'program_end': h[5],
+                'penyedia': h[6] or '-'
+            }
+            for h in hadiah_list
+        ]
+    
     context = {
-        "providers": PROVIDERS,
-        "rewards": _enriched_rewards(),
-        "today": date.today().isoformat(),
+        'hadiah_list': hadiah_data,
+        'today': date.today().isoformat()
     }
-    return render(request, "feat_merah/manage_rewards.html", context)
+    return render(request, 'feat_merah/manage_rewards.html', context)
 
 
 def manage_partners_view(request):
-    role_redirect = _require_role(request, "Staf")
+    role_redirect = _require_role(request, 'Staf')
     if role_redirect:
         return role_redirect
 
-    context = {
-        "partners": PARTNERS,
-        "next_provider_id": max(provider["id"] for provider in PROVIDERS) + 1,
-    }
-    return render(request, "feat_merah/manage_partners.html", context)
+    with connection.cursor() as cursor:
+        cursor.execute("""
+            SELECT email_mitra, nama_mitra, tanggal_kerja_sama
+            FROM MITRA
+            ORDER BY tanggal_kerja_sama DESC
+        """)
+        partners = cursor.fetchall()
+        
+        partners_data = [
+            {
+                'email': p[0],
+                'nama': p[1],
+                'tanggal_kerja_sama': p[2]
+            }
+            for p in partners
+        ]
+    
+    context = {'partners': partners_data}
+    return render(request, 'feat_merah/manage_partners.html', context)
