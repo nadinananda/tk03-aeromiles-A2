@@ -1,0 +1,36 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="mb-4">
+    <h2>Redeem Hadiah</h2>
+    <p class="text-muted">Tukarkan Award Miles Anda dengan berbagai hadiah menarik.</p>
+</div>
+
+<div class="row">
+    {% for hadiah in hadiah_list %}
+    <div class="col-md-4 mb-4">
+        <div class="card shadow-sm h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <span class="badge bg-primary">{{ hadiah.kode }}</span>
+                    <small class="text-muted">Berlaku s/d {{ hadiah.berlaku_sampai }}</small>
+                </div>
+                <h5 class="card-title">{{ hadiah.nama }}</h5>
+                <p class="card-text text-muted small mb-3">Penyedia: {{ hadiah.penyedia }}</p>
+                <h4 class="text-success mb-3">{{ hadiah.miles }} <small class="text-muted fs-6">Miles</small></h4>
+                
+                <form method="POST" action="#">
+                    {% csrf_token %}
+                    <!-- Nanti di TK04 lu passing ID/Kode Hadiah lewat hidden input -->
+                    <input type="hidden" name="kode_hadiah" value="{{ hadiah.kode }}">
+                    <button type="submit" class="btn btn-outline-primary w-100">Tukar Sekarang</button>
+                </form>
+            </div>
+        </div>
+    </div>
+    {% empty %}
+    <div class="col-12">
+        <div class="alert alert-warning">Saat ini belum ada hadiah yang tersedia.</div>
+    </div>
+    {% endfor %}
+</div>
+{% endblock content %}

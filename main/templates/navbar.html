@@ -9,16 +9,16 @@
             <ul class="navbar-nav me-auto">
                 {% if not request.session.email %}
                     <li class="nav-item"><a class="nav-link" href="{% url 'main:login' %}">Login</a></li>
-                    <li class="nav-item"><a class="nav-link" href="#">Registrasi</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{% url 'main:register' %}">Registrasi</a></li>
                 
                 {% elif request.session.role == 'Member' %}
                     <li class="nav-item"><a class="nav-link" href="{% url 'main:dashboard' %}">Dashboard</a></li>
                     <li class="nav-item"><a class="nav-link" href="#">Identitas Saya</a></li>
                     <li class="nav-item"><a class="nav-link" href="#">Klaim Miles</a></li>
                     <li class="nav-item"><a class="nav-link" href="#">Transfer Miles</a></li>
-                    <li class="nav-item"><a class="nav-link" href="#">Redeem Hadiah</a></li>
-                    <li class="nav-item"><a class="nav-link" href="#">Beli Package</a></li>
-                    <li class="nav-item"><a class="nav-link" href="#">Info Tier</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{% url 'feat_biru:redeem_hadiah' %}">Redeem Hadiah</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{% url 'feat_biru:beli_package' %}">Beli Package</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{% url 'feat_biru:info_tier' %}">Info Tier</a></li>
                 
                 {% elif request.session.role == 'Staf' %}
                     <li class="nav-item"><a class="nav-link" href="{% url 'main:dashboard' %}">Dashboard</a></li>
@@ -26,7 +26,7 @@
                     <li class="nav-item"><a class="nav-link" href="#">Kelola Klaim</a></li>
                     <li class="nav-item"><a class="nav-link" href="#">Kelola Hadiah & Penyedia</a></li>
                     <li class="nav-item"><a class="nav-link" href="#">Kelola Mitra</a></li>
-                    <li class="nav-item"><a class="nav-link" href="#">Laporan Transaksi</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{% url 'feat_biru:laporan_transaksi' %}">Laporan Transaksi</a></li>
                 {% endif %}
 
                 {% if request.session.email %}
