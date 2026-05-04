@@ -1,31 +1,28 @@
-# tk03-aeromiles-A2
+# tk04-aeromiles-A2
 
 # AeroMiles
 
 ## Prasyarat Sistem
 Sebelum menjalankan aplikasi ini, pastikan sistem Anda telah terinstal:
 * **Python** (Versi 3.10 atau lebih baru)
-* **PostgreSQL** (Versi 14 atau lebih baru)
 * **Git** (Opsional, untuk *version control*)
+* Akses ke database Supabase kelompok (AeroMiles)
 
 ---
 
 ## Panduan Instalasi & Menjalankan Aplikasi
 
-Ikuti langkah-langkah di bawah ini secara berurutan untuk menjalankan proyek di komputer lokal (localhost).
+Ikuti langkah-langkah di bawah ini secara berurutan untuk menjalankan proyek di komputer lokal (localhost) yang terhubung ke database cloud Supabase kami.
 
-### Langkah 1: Persiapan Database PostgreSQL
-1. Buka terminal psql atau pgAdmin.
-2. Buat database baru bernama `aeromiles`:
+### Langkah 1: Persiapan Skema Database (Opsional)
+*Catatan: Langkah ini hanya perlu dilakukan jika database Supabase belum diinisialisasi atau perlu di-reset.*
+1. Buka menu **SQL Editor** pada *dashboard* project Supabase AeroMiles yang sudah ada.
+2. Buka file `TK03_DUMP_SQL_A_A2.sql` dari repositori ini, lalu *copy* dan *paste* seluruh isinya ke dalam SQL Editor Supabase.
+3. Pastikan ekstensi `pgcrypto` diaktifkan untuk fungsi hashing dengan menyertakan baris ini di awal script:
    ```sql
-   CREATE DATABASE aeromiles;
-
-3. Hubungkan/masuk ke dalam database aeromiles
-4. Eksekusi file dump SQL yang telah disediakan untuk membuat skema dan data dummy:
-    -   Buka file TK03_DUMP_SQL_A_A2.sql dan jalankan seluruh isinya di dalam database aeromiles.
-    - Catatan Penting: Pastikan extension pgcrypto sudah terinstal di database tersebut agar fungsi hashing password dapat berjalan. Jika belum, jalankan perintah ini:
-  
-      CREATE EXTENSION IF NOT EXISTS pgcrypto;
+   CREATE EXTENSION IF NOT EXISTS pgcrypto WITH SCHEMA extensions;
+   SET search_path TO aeromiles, public, extensions;
+4. Klik Run untuk mengeksekusi skema dan data dummy.
 
 ### Langkah 2: Setup Virtual Environment Python
 1. Buat virtual environment baru:
@@ -50,10 +47,10 @@ Ikuti langkah-langkah di bawah ini secara berurutan untuk menjalankan proyek di 
 Buat file baru bernama .env di direktori utama proyek (sejajar dengan file manage.py), lalu copy-paste konfigurasi berikut. Sesuaikan DB_PASSWORD dengan password PostgreSQL di komputer Anda:
 
 ```.env 
-# Konfigurasi Database .env postgres
+# Konfigurasi Database Supabase (Session Pooler)
 DB_NAME=postgres
 DB_USER=postgres.jsyrvaxztetwlbfnwdjp
-DB_PASSWORD=PBT3uX76tjsGSkdB
+DB_PASSWORD=[MASUKKAN_PASSWORD_DISINI]
 DB_HOST=aws-1-ap-northeast-2.pooler.supabase.com
 DB_PORT=5432
 ```
