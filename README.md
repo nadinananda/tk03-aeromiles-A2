@@ -50,11 +50,11 @@ Ikuti langkah-langkah di bawah ini secara berurutan untuk menjalankan proyek di 
 Buat file baru bernama .env di direktori utama proyek (sejajar dengan file manage.py), lalu copy-paste konfigurasi berikut. Sesuaikan DB_PASSWORD dengan password PostgreSQL di komputer Anda:
 
 ```.env 
-# Konfigurasi Database PostgreSQL
-DB_NAME=aeromiles
-DB_USER=postgres
-DB_PASSWORD=postgres
-DB_HOST=localhost
+# Konfigurasi Database .env postgres
+DB_NAME=postgres
+DB_USER=postgres.jsyrvaxztetwlbfnwdjp
+DB_PASSWORD=PBT3uX76tjsGSkdB
+DB_HOST=aws-1-ap-northeast-2.pooler.supabase.com
 DB_PORT=5432
 ```
 
