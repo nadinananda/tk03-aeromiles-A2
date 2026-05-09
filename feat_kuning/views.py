@@ -139,8 +139,6 @@ def kelola_member_view(request):
                     cursor.execute("DELETE FROM PENGGUNA WHERE email=%s", [email])
                     messages.success(request, "Member berhasil dihapus secara permanen!")
 
-        except IntegrityError:
-            messages.error(request, "Email tersebut sudah terdaftar di sistem!")
         except Exception as e:
             messages.error(request, f"Duh, error: {str(e)}")
 
