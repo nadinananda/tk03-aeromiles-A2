@@ -1,5 +1,7 @@
 from django.shortcuts import render, redirect
-from django.db import connection
+from django.db import connection, IntegrityError
+from django.contrib import messages
+import time
 from datetime import date
 
 def login_view(request):
@@ -17,7 +19,7 @@ def login_view(request):
 
         with connection.cursor() as cursor:
             cursor.execute(
-                "SELECT email FROM PENGGUNA WHERE email = %s AND password = crypt(%s, password)", 
+                "SELECT email FROM PENGGUNA WHERE email = %s AND password = extensions.crypt(%s, password)", 
                 [email, password]
             )
             user = cursor.fetchone()
@@ -128,5 +130,79 @@ def dashboard_view(request):
 
 def register_view(request):
     if request.method == 'POST':
-        pass
-    return render(request, 'main/register.html')
+        role = request.POST.get('role')
+        email = request.POST.get('email', '').strip()
+        password = request.POST.get('password')
+        confirm_password = request.POST.get('confirm_password')
+        salutation = request.POST.get('salutation')
+        nama_depan = request.POST.get('nama_depan')
+        nama_belakang = request.POST.get('nama_belakang')
+        kewarganegaraan = request.POST.get('kewarganegaraan')
+        country_code = request.POST.get('country_code')
+        nomor_hp = request.POST.get('nomor_hp')
+        tanggal_lahir = request.POST.get('tanggal_lahir')
+        
+        kode_maskapai_pilihan = request.POST.get('kode_maskapai')
+
+        if password != confirm_password:
+            messages.error(request, "U-umm... Password-nya nggak sama, baka! Coba cek lagi!")
+            return redirect('main:register')
+
+        try:
+            with connection.cursor() as cursor:
+                cursor.execute("""
+                    INSERT INTO PENGGUNA (email, password, salutation, first_mid_name, last_name, country_code, mobile_number, tanggal_lahir, kewarganegaraan)
+                    VALUES (%s, extensions.crypt(%s, extensions.gen_salt('bf')), %s, %s, %s, %s, %s, %s, %s)
+                """, [email, password, salutation, nama_depan, nama_belakang, country_code, nomor_hp, tanggal_lahir, kewarganegaraan])
+
+                if role == 'Member':
+                    cursor.execute("SELECT nomor_member FROM MEMBER")
+                    semua_member = cursor.fetchall()
+                    max_num = 0
+                    for m in semua_member:
+                        angka_saja = ''.join(filter(str.isdigit, m[0]))
+                        if angka_saja:
+                            max_num = max(max_num, int(angka_saja))
+                    
+                    nomor_member = f"M{max_num + 1:04d}"
+                    
+                    cursor.execute("""
+                        INSERT INTO MEMBER (email, nomor_member, tanggal_bergabung, id_tier, award_miles, total_miles)
+                        VALUES (%s, %s, CURRENT_DATE, 'T-BLUE', 0, 0)
+                    """, [email, nomor_member])
+                
+                elif role == 'Staf':
+                    if not kode_maskapai_pilihan:
+                        raise ValueError("Maskapai harus dipilih untuk peran Staf!")
+
+                    cursor.execute("SELECT id_staf FROM STAF")
+                    semua_staf = cursor.fetchall()
+                    max_num = 0
+                    for s in semua_staf:
+                        angka_saja = ''.join(filter(str.isdigit, s[0]))
+                        if angka_saja:
+                            max_num = max(max_num, int(angka_saja))
+                            
+                    id_staf = f"S{max_num + 1:04d}"
+                    
+                    cursor.execute("""
+                        INSERT INTO STAF (email, id_staf, kode_maskapai)
+                        VALUES (%s, %s, %s)
+                    """, [email, id_staf, kode_maskapai_pilihan])
+
+            messages.success(request, "Registrasi berhasil! Sekarang kamu bisa login... kalau mau.")
+            return redirect('main:login')
+
+        except IntegrityError:
+            messages.error(request, "Email itu sudah ada yang punya! Kayak hatiku... eh, maksudku cari email lain, baka!")
+            return redirect('main:register')
+        except Exception as e:
+            messages.error(request, f"Duh, ada yang salah: {str(e)}")
+            return redirect('main:register')
+
+    maskapai_list = []
+    with connection.cursor() as cursor:
+        cursor.execute("SELECT kode_maskapai, nama_maskapai FROM MASKAPAI")
+        maskapai_list = cursor.fetchall()
+
+    return render(request, 'main/register.html', {'maskapai_list': maskapai_list})
