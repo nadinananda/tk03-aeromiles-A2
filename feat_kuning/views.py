@@ -1,12 +1,12 @@
 from django.shortcuts import render, redirect
-from django.db import connection
+from django.db import connection, IntegrityError
 from django.contrib import messages
 from datetime import date
 import time
 
 def identitas_member_view(request):
     if 'email' not in request.session or request.session.get('role') != 'Member':
-        messages.error(request, "u-umm... Kamu harus login sebagai Member dulu, baka!")
+        messages.error(request, "U-umm... Kamu harus login sebagai Member dulu, baka!")
         return redirect('main:login')
     
     email_user = request.session.get('email')
@@ -40,6 +40,9 @@ def identitas_member_view(request):
                 elif action == 'hapus':
                     cursor.execute("DELETE FROM IDENTITAS WHERE nomor=%s AND email_member=%s", [nomor_lama, email_user])
                     messages.success(request, "Data identitas berhasil dihapus!")
+            
+            except IntegrityError:
+                messages.error(request, "Nomor dokumen tersebut sudah terdaftar!")
             except Exception as e:
                 messages.error(request, f"Duh, gagal memproses data: {str(e)}")
                 
@@ -58,8 +61,8 @@ def identitas_member_view(request):
             'nomor': i[0],
             'jenis': i[1],
             'negara': i[2],
-            'terbit': i[3],
-            'habis': i[4],
+            'terbit': str(i[3]),
+            'habis': str(i[4]),
             'status': 'Aktif' if i[4] > date.today() else 'Kedaluwarsa'
         }
         for i in identitas_list
@@ -68,12 +71,12 @@ def identitas_member_view(request):
     context = {'identitas_list': identitas_data}
     return render(request, 'identitas_member.html', context)
 
+
 def kelola_member_view(request):
     if 'email' not in request.session or request.session.get('role') != 'Staf':
         messages.error(request, "Akses ditolak! Cuma Staf yang boleh ke sini!")
         return redirect('main:login')
     
-    # --- LOGIC CREATE, UPDATE, DELETE ---
     if request.method == 'POST':
         action = request.POST.get('action')
         
@@ -90,13 +93,11 @@ def kelola_member_view(request):
                     nomor_hp = request.POST.get('mobile_number')
                     tanggal_lahir = request.POST.get('tanggal_lahir')
 
-                    # 1. Insert PENGGUNA
                     cursor.execute("""
                         INSERT INTO PENGGUNA (email, password, salutation, first_mid_name, last_name, country_code, mobile_number, tanggal_lahir, kewarganegaraan)
-                        VALUES (%s, extenstions.crypt(%s, extensions.gen_salt('bf')), %s, %s, %s, %s, %s, %s, %s)
+                        VALUES (%s, extensions.crypt(%s, extensions.gen_salt('bf')), %s, %s, %s, %s, %s, %s, %s)
                     """, [email, password, salutation, nama_depan, nama_belakang, country_code, nomor_hp, tanggal_lahir, kewarganegaraan])
 
-                    # 2. Logic Sequential Nomor Member
                     cursor.execute("SELECT nomor_member FROM MEMBER")
                     semua_member = cursor.fetchall()
                     max_num = 0
@@ -107,7 +108,6 @@ def kelola_member_view(request):
                     
                     nomor_member = f"M{max_num + 1:04d}"
                     
-                    # 3. Insert MEMBER
                     cursor.execute("""
                         INSERT INTO MEMBER (email, nomor_member, tanggal_bergabung, id_tier, award_miles, total_miles)
                         VALUES (%s, %s, CURRENT_DATE, 'T-BLUE', 0, 0)
@@ -136,30 +136,51 @@ def kelola_member_view(request):
 
                 elif action == 'hapus':
                     email = request.POST.get('email')
-                    # Hapus PENGGUNA akan trigger CASCADE delete ke MEMBER dan IDENTITAS
                     cursor.execute("DELETE FROM PENGGUNA WHERE email=%s", [email])
                     messages.success(request, "Member berhasil dihapus secara permanen!")
 
+        except IntegrityError:
+            messages.error(request, "Email tersebut sudah terdaftar di sistem!")
         except Exception as e:
             messages.error(request, f"Duh, error: {str(e)}")
 
         return redirect('kuning:kelola_member')
 
-    # --- LOGIC READ ---
+    search_query = request.GET.get('search', '').strip()
+    tier_filter = request.GET.get('tier', 'Semua Tier')
+
     with connection.cursor() as cursor:
-        cursor.execute("""
+        query = """
             SELECT m.nomor_member, p.salutation, p.first_mid_name, p.last_name, 
-                   p.email, t.nama, m.total_miles, m.award_miles, m.tanggal_bergabung, t.id_tier
+                   p.email, t.nama, m.total_miles, m.award_miles, m.tanggal_bergabung, t.id_tier,
+                   p.kewarganegaraan, p.country_code, p.mobile_number, p.tanggal_lahir
             FROM MEMBER m
             JOIN PENGGUNA p ON m.email = p.email
             JOIN TIER t ON m.id_tier = t.id_tier
-            ORDER BY m.tanggal_bergabung DESC
-        """)
+            WHERE 1=1
+        """
+        params = []
+        
+        # Implementasi pencarian pakai ILIKE supaya case-insensitive
+        if search_query:
+            query += " AND (m.nomor_member ILIKE %s OR p.email ILIKE %s OR (p.first_mid_name || ' ' || p.last_name) ILIKE %s)"
+            params.extend([f"%{search_query}%", f"%{search_query}%", f"%{search_query}%"])
+            
+        # Implementasi filter Tier
+        if tier_filter != 'Semua Tier':
+            query += " AND t.nama = %s"
+            params.append(tier_filter)
+
+        query += " ORDER BY m.tanggal_bergabung DESC"
+        cursor.execute(query, params)
         members = cursor.fetchall()
     
     member_data = [
         {
             'nomor': m[0],
+            'salutation': m[1],
+            'first_mid_name': m[2],
+            'last_name': m[3],
             'nama': f"{m[1]} {m[2]} {m[3]}",
             'email': m[4],
             'tier': m[5],
@@ -167,9 +188,22 @@ def kelola_member_view(request):
             'tier_color': 'primary' if m[5] == 'Blue' else 'secondary' if m[5] == 'Silver' else 'warning' if m[5] == 'Gold' else 'dark',
             'total_miles': f"{m[6]:,}",
             'award_miles': f"{m[7]:,}",
-            'bergabung': str(m[8])
+            'bergabung': str(m[8]),
+            'kewarganegaraan': m[10],
+            'country_code': m[11],
+            'mobile_number': m[12],
+            'tanggal_lahir': str(m[13])
         }
         for m in members
     ]
     
-    return render(request, 'kelola_member.html', {'member_list': member_data})
+    # FITUR 2 & 5: Kirimkan list negara ke template HTML
+    context = {
+        'member_list': member_data,
+        'search_query': search_query,
+        'tier_filter': tier_filter,
+        'negara_list': ['Indonesia', 'Malaysia', 'Singapura', 'Thailand', 'Jepang', 'Korea Selatan', 'Amerika Serikat', 'Inggris'],
+        'kode_negara_list': ['+62', '+60', '+65', '+66', '+81', '+82', '+1', '+44'],
+    }
+    
+    return render(request, 'kelola_member.html', context)
