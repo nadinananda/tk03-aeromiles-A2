@@ -1,262 +1,187 @@
 {% extends 'base.html' %}
-
 {% block content %}
 <style>
     .bg-aeromiles { background-color: #041E42; }
-    .text-aeromiles { color: #041E42; }
     .btn-aeromiles { background-color: #041E42; color: white; }
-    .btn-aeromiles:hover { background-color: #03142e; color: white; }
-    
-    .table-custom th {
-        background-color: #f8f9fa;
-        color: #6c757d;
-        font-weight: 600;
-        font-size: 0.85rem;
-        border-bottom: 2px solid #dee2e6;
-    }
-    .table-custom td {
-        vertical-align: middle;
-        font-size: 0.9rem;
-    }
-    .badge-tier { font-weight: 500; width: 60px; display: inline-block; text-align: center; }
+    .table-custom th { background-color: #f8f9fa; color: #6c757d; font-weight: 600; border-bottom: 2px solid #dee2e6; }
 </style>
 
 <div class="container-fluid py-4 font-sans">
-    
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h3 class="fw-bold text-aeromiles mb-0">Kelola Member</h3>
-        <button class="btn btn-aeromiles fw-semibold shadow-sm" data-bs-toggle="modal" data-bs-target="#tambahMemberModal">
-            + Tambah Member
-        </button>
+        <button class="btn btn-aeromiles fw-semibold shadow-sm" data-bs-toggle="modal" data-bs-target="#tambahMemberModal">+ Tambah Member</button>
     </div>
 
     <div class="card border-0 shadow-sm rounded-4">
-        <div class="card-body p-4">
+        <div class="card-body p-4 table-responsive">
             
-            <div class="row mb-4">
-                <div class="col-md-8 mb-2 mb-md-0">
-                    <input type="text" class="form-control bg-light border-0" placeholder="🔍 Cari nama, email, atau nomor member...">
+            <form method="GET" action="" class="row mb-4">
+                <div class="col-md-7 mb-2 mb-md-0">
+                    <input type="text" name="search" class="form-control bg-light border-0" placeholder="🔍 Cari nama, email, atau nomor member..." value="{{ search_query }}">
                 </div>
-                <div class="col-md-4">
-                    <select class="form-select bg-light border-0">
-                        <option selected>Semua Tier</option>
-                        <option value="1">Blue</option>
-                        <option value="2">Silver</option>
-                        <option value="3">Gold</option>
-                        <option value="4">Platinum</option>
+                <div class="col-md-3 mb-2 mb-md-0">
+                    <select name="tier" class="form-select bg-light border-0">
+                        <option value="Semua Tier" {% if tier_filter == 'Semua Tier' %}selected{% endif %}>Semua Tier</option>
+                        <option value="Blue" {% if tier_filter == 'Blue' %}selected{% endif %}>Blue</option>
+                        <option value="Silver" {% if tier_filter == 'Silver' %}selected{% endif %}>Silver</option>
+                        <option value="Gold" {% if tier_filter == 'Gold' %}selected{% endif %}>Gold</option>
+                        <option value="Platinum" {% if tier_filter == 'Platinum' %}selected{% endif %}>Platinum</option>
                     </select>
                 </div>
-            </div>
+                <div class="col-md-2">
+                    <button type="submit" class="btn btn-aeromiles w-100">Filter</button>
+                </div>
+            </form>
 
-            <div class="table-responsive">
-                <table class="table table-hover table-custom mb-0">
-                    <thead>
-                        <tr>
-                            <th>No. Member</th>
-                            <th>Nama</th>
-                            <th>Email</th>
-                            <th>Tier</th>
-                            <th>Total Miles</th>
-                            <th>Award Miles</th>
-                            <th>Bergabung</th>
-                            <th>Aksi</th>
-                        </tr>
-                    </thead>
-                   <tbody>
-                        {% for member in member_list %}
-                        <tr>
-                            <td class="fw-bold">{{ member.nomor }}</td>
-                            <td>{{ member.nama }}</td>
-                            <td>{{ member.email }}</td>
-                            <td><span class="badge bg-{{ member.tier_color }} badge-tier rounded-pill">{{ member.tier }}</span></td>
-                            <td>{{ member.total_miles }}</td>
-                            <td>{{ member.award_miles }}</td>
-                            <td>{{ member.bergabung }}</td>
-                            <td>
-                                <button class="btn btn-sm btn-light text-secondary me-1" data-bs-toggle="modal" data-bs-target="#editMemberModal">✏️</button>
-                                <button class="btn btn-sm btn-light text-danger" data-bs-toggle="modal" data-bs-target="#hapusMemberModal">🗑️</button>
-                            </td>
-                        </tr>
-                        {% empty %}
-                        <tr>
-                            <td colspan="8" class="text-center text-muted py-4">Tidak ada data member yang ditemukan.</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-            
-        </div>
-    </div>
-</div>
-                </table>
-            </div>
-            
+            <table class="table table-hover table-custom mb-0">
+                <thead>
+                    <tr>
+                        <th>No. Member</th><th>Nama</th><th>Email</th><th>Tier</th><th>Total Miles</th><th>Bergabung</th><th>Aksi</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for m in member_list %}
+                    <tr>
+                        <td class="fw-bold">{{ m.nomor }}</td><td>{{ m.nama }}</td><td>{{ m.email }}</td>
+                        <td><span class="badge bg-{{ m.tier_color }}">{{ m.tier }}</span></td>
+                        <td>{{ m.total_miles }}</td><td>{{ m.bergabung }}</td>
+                        <td>
+                            <button class="btn btn-sm btn-light text-secondary me-1" onclick="siapkanEditMember('{{ m.email }}', '{{ m.salutation }}', '{{ m.first_mid_name }}', '{{ m.last_name }}', '{{ m.kewarganegaraan }}', '{{ m.country_code }}', '{{ m.mobile_number }}', '{{ m.tanggal_lahir }}', '{{ m.id_tier }}')" data-bs-toggle="modal" data-bs-target="#editMemberModal">✏️</button>
+                            <button class="btn btn-sm btn-light text-danger" onclick="siapkanHapusMember('{{ m.email }}')" data-bs-toggle="modal" data-bs-target="#hapusMemberModal">🗑️</button>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="7" class="text-center text-muted">Tidak ada member yang cocok dengan pencarian.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
         </div>
     </div>
 </div>
 
-<div class="modal fade" id="tambahMemberModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-lg">
+<div class="modal fade" id="tambahMemberModal" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
         <div class="modal-content rounded-4 border-0 shadow">
-            <div class="modal-header border-bottom-0 pb-0">
-                <h5 class="modal-title fw-bold">Tambah Member Baru</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
+            <div class="modal-header"><h5 class="modal-title fw-bold">Tambah Member Baru</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
             <div class="modal-body p-4">
                 <form action="" method="POST">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="tambah">
                     <div class="row mb-3">
-                        <div class="col-md-6">
-                            <label class="form-label small fw-semibold">Email</label>
-                            <input type="email" class="form-control" required>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label small fw-semibold">Password</label>
-                            <input type="password" class="form-control" required>
-                        </div>
+                        <div class="col-md-6"><label class="form-label">Email</label><input type="email" name="email" class="form-control" required></div>
+                        <div class="col-md-6"><label class="form-label">Password</label><input type="password" name="password" class="form-control" required></div>
                     </div>
                     <div class="row mb-3">
-                        <div class="col-md-6">
-                            <label class="form-label small fw-semibold">Salutation</label>
-                            <select class="form-select" required>
-                                <option>Mr.</option>
-                                <option>Mrs.</option>
-                                <option>Ms.</option>
-                                <option>Dr.</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div class="row mb-3">
-                        <div class="col-md-6">
-                            <label class="form-label small fw-semibold">Nama Depan (First/Mid)</label>
-                            <input type="text" class="form-control" required>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label small fw-semibold">Nama Belakang</label>
-                            <input type="text" class="form-control" required>
-                        </div>
-                    </div>
-                    <div class="row mb-3">
-                        <div class="col-md-6">
-                            <label class="form-label small fw-semibold">Kewarganegaraan</label>
-                            <select class="form-select" required>
-                                <option>Indonesia</option>
-                            </select>
-                        </div>
+                        <div class="col-md-3"><label class="form-label">Salutation</label><select name="salutation" class="form-select"><option>Mr.</option><option>Mrs.</option><option>Ms.</option><option>Dr.</option></select></div>
+                        <div class="col-md-4"><label class="form-label">Nama Depan</label><input type="text" name="first_mid_name" class="form-control" required></div>
+                        <div class="col-md-5"><label class="form-label">Nama Belakang</label><input type="text" name="last_name" class="form-control" required></div>
                     </div>
                     <div class="row mb-3">
                         <div class="col-md-4">
-                            <label class="form-label small fw-semibold">Country Code</label>
-                            <select class="form-select">
-                                <option>+62</option>
+                            <label class="form-label">Negara</label>
+                            <select name="kewarganegaraan" class="form-select">
+                                {% for n in negara_list %}
+                                    <option value="{{ n }}">{{ n }}</option>
+                                {% endfor %}
                             </select>
                         </div>
-                        <div class="col-md-8">
-                            <label class="form-label small fw-semibold">Nomor HP</label>
-                            <input type="tel" class="form-control" required>
+                        <div class="col-md-3">
+                            <label class="form-label">Kode</label>
+                            <select name="country_code" class="form-select">
+                                {% for code in kode_negara_list %}
+                                    <option value="{{ code }}">{{ code }}</option>
+                                {% endfor %}
+                            </select>
                         </div>
+                        <div class="col-md-5"><label class="form-label">Nomor HP</label><input type="tel" name="mobile_number" class="form-control" required></div>
                     </div>
                     <div class="row mb-4">
-                        <div class="col-md-6">
-                            <label class="form-label small fw-semibold">Tanggal Lahir</label>
-                            <input type="date" class="form-control" required>
-                        </div>
+                        <div class="col-md-6"><label class="form-label">Tanggal Lahir</label><input type="date" name="tanggal_lahir" class="form-control" required></div>
                     </div>
-                    <div class="text-end">
-                        <button type="submit" class="btn btn-aeromiles px-4 rounded-3">Simpan</button>
-                    </div>
+                    <div class="text-end"><button type="submit" class="btn btn-aeromiles px-4">Simpan</button></div>
                 </form>
             </div>
         </div>
     </div>
 </div>
 
-<div class="modal fade" id="editMemberModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-lg">
+<div class="modal fade" id="editMemberModal" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
         <div class="modal-content rounded-4 border-0 shadow">
-            <div class="modal-header border-bottom-0 pb-0">
-                <h5 class="modal-title fw-bold">Edit Member</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
+            <div class="modal-header"><h5 class="modal-title fw-bold">Edit Member</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
             <div class="modal-body p-4">
                 <form action="" method="POST">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="edit">
+                    <input type="hidden" name="email" id="edit_email">
                     <div class="row mb-3">
-                        <div class="col-md-6">
-                            <label class="form-label small fw-semibold">Salutation</label>
-                            <select class="form-select">
-                                <option selected>Mr.</option>
-                                <option>Mrs.</option>
-                                <option>Ms.</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div class="row mb-3">
-                        <div class="col-md-6">
-                            <label class="form-label small fw-semibold">Nama Depan (First/Mid)</label>
-                            <input type="text" class="form-control" value="John William">
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label small fw-semibold">Nama Belakang</label>
-                            <input type="text" class="form-control" value="Doe">
-                        </div>
-                    </div>
-                    <div class="row mb-3">
-                        <div class="col-md-6">
-                            <label class="form-label small fw-semibold">Kewarganegaraan</label>
-                            <select class="form-select">
-                                <option selected>Indonesia</option>
-                            </select>
-                        </div>
+                        <div class="col-md-3"><label class="form-label">Salutation</label><select name="salutation" id="edit_salutation" class="form-select"><option>Mr.</option><option>Mrs.</option><option>Ms.</option><option>Dr.</option></select></div>
+                        <div class="col-md-4"><label class="form-label">Nama Depan</label><input type="text" name="first_mid_name" id="edit_first" class="form-control" required></div>
+                        <div class="col-md-5"><label class="form-label">Nama Belakang</label><input type="text" name="last_name" id="edit_last" class="form-control" required></div>
                     </div>
                     <div class="row mb-3">
                         <div class="col-md-4">
-                            <label class="form-label small fw-semibold">Country Code</label>
-                            <select class="form-select">
-                                <option selected>+62</option>
+                            <label class="form-label">Negara</label>
+                            <select name="kewarganegaraan" id="edit_warga" class="form-select">
+                                {% for n in negara_list %}
+                                    <option value="{{ n }}">{{ n }}</option>
+                                {% endfor %}
                             </select>
                         </div>
-                        <div class="col-md-8">
-                            <label class="form-label small fw-semibold">Nomor HP</label>
-                            <input type="tel" class="form-control" value="81234567890">
+                        <div class="col-md-3">
+                            <label class="form-label">Kode</label>
+                            <select name="country_code" id="edit_code" class="form-select">
+                                {% for code in kode_negara_list %}
+                                    <option value="{{ code }}">{{ code }}</option>
+                                {% endfor %}
+                            </select>
                         </div>
+                        <div class="col-md-5"><label class="form-label">Nomor HP</label><input type="tel" name="mobile_number" id="edit_hp" class="form-control" required></div>
                     </div>
                     <div class="row mb-4">
-                        <div class="col-md-6">
-                            <label class="form-label small fw-semibold">Tanggal Lahir</label>
-                            <input type="date" class="form-control" value="1990-05-15">
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label small fw-semibold">Tier</label>
-                            <select class="form-select">
-                                <option>Blue</option>
-                                <option>Silver</option>
-                                <option selected>Gold</option>
-                                <option>Platinum</option>
-                            </select>
-                        </div>
+                        <div class="col-md-6"><label class="form-label">Tanggal Lahir</label><input type="date" name="tanggal_lahir" id="edit_lahir" class="form-control" required></div>
+                        <div class="col-md-6"><label class="form-label">Tier</label><select name="tier" id="edit_tier" class="form-select"><option value="T-BLUE">Blue</option><option value="T-SLVR">Silver</option><option value="T-GOLD">Gold</option><option value="T-PLAT">Platinum</option></select></div>
                     </div>
-                    <div class="text-end">
-                        <button type="submit" class="btn btn-aeromiles px-4 rounded-3">Simpan</button>
-                    </div>
+                    <div class="text-end"><button type="submit" class="btn btn-aeromiles px-4">Simpan Perubahan</button></div>
                 </form>
             </div>
         </div>
     </div>
 </div>
 
-<div class="modal fade" id="hapusMemberModal" tabindex="-1" aria-hidden="true">
+<div class="modal fade" id="hapusMemberModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content rounded-4 border-0 shadow">
             <div class="modal-body p-4 text-center">
                 <h5 class="fw-bold mb-3">Hapus Member?</h5>
-                <p class="text-secondary mb-4">Semua data terkait (Identitas, Klaim, Transfer, Redeem) akan ikut terhapus. Tindakan ini tidak dapat dibatalkan.</p>
-                <div class="d-flex justify-content-center gap-2">
-                    <button type="button" class="btn btn-light px-4 border rounded-3" data-bs-dismiss="modal">Batal</button>
-                    <button type="button" class="btn btn-aeromiles px-4 rounded-3">Hapus</button>
-                </div>
+                <form action="" method="POST">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="hapus">
+                    <input type="hidden" name="email" id="hapus_email">
+                    <div class="d-flex justify-content-center gap-2">
+                        <button type="button" class="btn btn-light px-4 border rounded-3" data-bs-dismiss="modal">Batal</button>
+                        <button type="submit" class="btn btn-aeromiles px-4">Hapus</button>
+                    </div>
+                </form>
             </div>
         </div>
     </div>
 </div>
 
-{% endblock content %}
+<script>
+    function siapkanEditMember(email, salutation, first, last, warga, code, hp, lahir, tier) {
+        document.getElementById('edit_email').value = email;
+        document.getElementById('edit_salutation').value = salutation;
+        document.getElementById('edit_first').value = first;
+        document.getElementById('edit_last').value = last;
+        document.getElementById('edit_warga').value = warga;
+        document.getElementById('edit_code').value = code;
+        document.getElementById('edit_hp').value = hp;
+        document.getElementById('edit_lahir').value = lahir;
+        document.getElementById('edit_tier').value = tier;
+    }
+    function siapkanHapusMember(email) {
+        document.getElementById('hapus_email').value = email;
+    }
+</script>
+{% endblock %}

@@ -18,13 +18,10 @@ def login_view(request):
         password = request.POST.get('password', '')
 
         with connection.cursor() as cursor:
-            cursor.execute(
-                "SELECT email FROM PENGGUNA WHERE email = %s AND password = extensions.crypt(%s, password)", 
-                [email, password]
-            )
-            user = cursor.fetchone()
+            cursor.execute("SELECT check_kredensial(%s, %s)", [email, password])
+            is_valid_login = cursor.fetchone()[0]
 
-            if user:
+            if is_valid_login:
                 cursor.execute("SELECT email FROM MEMBER WHERE email = %s", [email])
                 is_member = cursor.fetchone()
                 
@@ -39,7 +36,7 @@ def login_view(request):
                 return redirect('main:dashboard')
             else:
                 context.update({
-                    'error': 'Email atau Password salah!',
+                    'error': 'Email atau Password salah, silakan coba lagi.',
                     'email_value': email,
                 })
 
@@ -129,6 +126,16 @@ def dashboard_view(request):
     return render(request, 'main/dashboard.html', context)
 
 def register_view(request):
+    maskapai_list = []
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT kode_maskapai, nama_maskapai FROM MASKAPAI")
+            maskapai_list = cursor.fetchall()
+    except Exception as e:
+        print(f"Gagal ambil maskapai: {e}")
+
+    context = {'maskapai_list': maskapai_list}
+
     if request.method == 'POST':
         role = request.POST.get('role')
         email = request.POST.get('email', '').strip()
@@ -145,8 +152,8 @@ def register_view(request):
         kode_maskapai_pilihan = request.POST.get('kode_maskapai')
 
         if password != confirm_password:
-            messages.error(request, "U-umm... Password-nya nggak sama, baka! Coba cek lagi!")
-            return redirect('main:register')
+            context['error'] = "U-umm... Password-nya nggak sama, baka! Coba cek lagi!"
+            return render(request, 'main/register.html', context)
 
         try:
             with connection.cursor() as cursor:
@@ -193,16 +200,9 @@ def register_view(request):
             messages.success(request, "Registrasi berhasil! Sekarang kamu bisa login... kalau mau.")
             return redirect('main:login')
 
-        except IntegrityError:
-            messages.error(request, "Email itu sudah ada yang punya! Kayak hatiku... eh, maksudku cari email lain, baka!")
-            return redirect('main:register')
         except Exception as e:
-            messages.error(request, f"Duh, ada yang salah: {str(e)}")
-            return redirect('main:register')
+            error_asli = str(e).split('CONTEXT:')[0].strip()
+            context['error'] = error_asli
+            return render(request, 'main/register.html', context)
 
-    maskapai_list = []
-    with connection.cursor() as cursor:
-        cursor.execute("SELECT kode_maskapai, nama_maskapai FROM MASKAPAI")
-        maskapai_list = cursor.fetchall()
-
-    return render(request, 'main/register.html', {'maskapai_list': maskapai_list})
+    return render(request, 'main/register.html', context)
