@@ -100,19 +100,30 @@
                         <label class="form-label small fw-semibold">Nama Depan <span class="text-danger">*</span></label>
                         <input type="text" class="form-control px-3 py-2" name="nama_depan" required>
                     </div>
+                    <div class="col-md-6">
+                        <label class="form-label small fw-semibold">Nama Belakang <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control px-3 py-2" name="nama_belakang" required>
+                    </div>
                 </div>
 
                 <div class="row mb-3">
                     <div class="col-md-6 mb-3 mb-md-0">
-                        <label class="form-label small fw-semibold">Nama Belakang <span class="text-danger">*</span></label>
-                        <input type="text" class="form-control px-3 py-2" name="nama_belakang" required>
-                    </div>
-                    <div class="col-md-6">
                         <label class="form-label small fw-semibold">Kewarganegaraan <span class="text-danger">*</span></label>
                         <select class="form-select px-3 py-2" name="kewarganegaraan" required>
                             <option value="" selected disabled>Pilih negara</option>
                             <option value="Indonesia">Indonesia</option>
-                            </select>
+                            <option value="Malaysia">Malaysia</option>
+                            <option value="Singapura">Singapura</option>
+                            <option value="Thailand">Thailand</option>
+                            <option value="Jepang">Jepang</option>
+                            <option value="Korea Selatan">Korea Selatan</option>
+                            <option value="Amerika Serikat">Amerika Serikat</option>
+                            <option value="Inggris">Inggris</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small fw-semibold">Tanggal Lahir <span class="text-danger">*</span></label>
+                        <input type="date" class="form-control px-3 py-2 text-secondary" name="tanggal_lahir" required>
                     </div>
                 </div>
 
@@ -120,7 +131,15 @@
                     <div class="col-md-6 mb-3 mb-md-0">
                         <label class="form-label small fw-semibold">Country Code</label>
                         <select class="form-select px-3 py-2" name="country_code" required>
-                            <option value="+62">+62</option>
+                            <option value="" selected disabled>Kode</option>
+                            <option value="+62">+62 (Indonesia)</option>
+                            <option value="+60">+60 (Malaysia)</option>
+                            <option value="+65">+65 (Singapura)</option>
+                            <option value="+66">+66 (Thailand)</option>
+                            <option value="+81">+81 (Jepang)</option>
+                            <option value="+82">+82 (Korea Selatan)</option>
+                            <option value="+1">+1 (AS/Kanada)</option>
+                            <option value="+44">+44 (Inggris)</option>
                         </select>
                     </div>
                     <div class="col-md-6">
@@ -129,10 +148,16 @@
                     </div>
                 </div>
 
-                <div class="row mb-4">
-                    <div class="col-md-6">
-                        <label class="form-label small fw-semibold">Tanggal Lahir <span class="text-danger">*</span></label>
-                        <input type="date" class="form-control px-3 py-2 text-secondary" name="tanggal_lahir" required>
+                <div class="row mb-4" id="form-maskapai" style="display: none;">
+                    <div class="col-md-12">
+                        <label class="form-label small fw-semibold">Maskapai <span class="text-danger">*</span></label>
+                        <select class="form-select px-3 py-2" name="kode_maskapai" id="input_maskapai">
+                            <option value="" selected disabled>Pilih Maskapai</option>
+                            {% for maskapai in maskapai_list %}
+                                <option value="{{ maskapai.0 }}">{{ maskapai.1 }} ({{ maskapai.0 }})</option>
+                            {% endfor %}
+                        </select>
+                        <small class="text-muted mt-1 d-block">Wajib diisi jika mendaftar sebagai Staf.</small>
                     </div>
                 </div>
 
@@ -146,4 +171,33 @@
         </div>
     </div>
 </div>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        const roleMember = document.getElementById("roleMember");
+        const roleStaf = document.getElementById("roleStaf");
+        const formMaskapai = document.getElementById("form-maskapai");
+        const inputMaskapai = document.getElementById("input_maskapai");
+
+        function toggleMaskapaiForm() {
+            if (roleStaf.checked) {
+                // Munculkan dropdown dan jadikan required
+                formMaskapai.style.display = "block";
+                inputMaskapai.required = true;
+            } else {
+                // Sembunyikan dropdown dan hapus required
+                formMaskapai.style.display = "none";
+                inputMaskapai.required = false;
+                inputMaskapai.value = ""; // Reset pilihan
+            }
+        }
+
+        // Pasang event listener saat tombol radio di-klik
+        roleMember.addEventListener("change", toggleMaskapaiForm);
+        roleStaf.addEventListener("change", toggleMaskapaiForm);
+
+        // Jalankan sekali saat halaman pertama di-load
+        toggleMaskapaiForm();
+    });
+</script>
 {% endblock content %}
