@@ -3,7 +3,7 @@
 -- ==============================================================================
 DROP SCHEMA IF EXISTS aeromiles CASCADE;
 CREATE SCHEMA aeromiles;
-CREATE EXTENSION IF NOT EXISTS pgcrypto;
+CREATE EXTENSION IF NOT EXISTS pgcrypto WITH SCHEMA extensions;
 SET search_path TO aeromiles, public;
 
 -- ==============================================================================

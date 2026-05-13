@@ -1,113 +1,75 @@
 {% extends 'base.html' %}
-
 {% block content %}
 <style>
     .bg-aeromiles { background-color: #041E42; }
     .text-aeromiles { color: #041E42; }
     .btn-aeromiles { background-color: #041E42; color: white; }
     .btn-aeromiles:hover { background-color: #03142e; color: white; }
-    
-    .table-custom th {
-        background-color: #f8f9fa;
-        color: #6c757d;
-        font-weight: 600;
-        font-size: 0.85rem;
-        border-bottom: 2px solid #dee2e6;
-    }
-    .table-custom td {
-        vertical-align: middle;
-        font-size: 0.9rem;
-    }
+    .table-custom th { background-color: #f8f9fa; color: #6c757d; font-weight: 600; border-bottom: 2px solid #dee2e6; }
     .badge-status { font-weight: 500; padding: 0.35em 0.8em; }
 </style>
 
 <div class="container-fluid py-4 font-sans">
-    
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h3 class="fw-bold mb-0">Identitas Saya</h3>
-        <button class="btn btn-aeromiles fw-semibold shadow-sm" data-bs-toggle="modal" data-bs-target="#tambahIdentitasModal">
-            + Tambah Identitas
-        </button>
+        <button class="btn btn-aeromiles fw-semibold shadow-sm" data-bs-toggle="modal" data-bs-target="#tambahIdentitasModal">+ Tambah Identitas</button>
     </div>
 
     <div class="card border-0 shadow-sm rounded-4">
-        <div class="card-body p-4">
-            
-            <div class="table-responsive">
-                <table class="table table-hover table-custom mb-0 text-center">
-                    <thead>
-                        <tr>
-                            <th class="text-start">No. Dokumen</th>
-                            <th>Jenis</th>
-                            <th>Negara</th>
-                            <th>Terbit</th>
-                            <th>Habis</th>
-                            <th>Status</th>
-                            <th>Aksi</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td class="text-start fw-bold">A12345678</td>
-                            <td>Paspor</td>
-                            <td>Indonesia</td>
-                            <td>2020-01-15</td>
-                            <td>2030-01-15</td>
-                            <td><span class="badge bg-success badge-status rounded-pill">Aktif</span></td>
-                            <td>
-                                <button class="btn btn-sm btn-light text-secondary me-1" data-bs-toggle="modal" data-bs-target="#editIdentitasModal">✏️</button>
-                                <button class="btn btn-sm btn-light text-danger" data-bs-toggle="modal" data-bs-target="#hapusIdentitasModal">🗑️</button>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td class="text-start fw-bold">3275012345678901</td>
-                            <td>KTP</td>
-                            <td>Indonesia</td>
-                            <td>2019-06-01</td>
-                            <td>2024-06-01</td>
-                            <td><span class="badge bg-danger badge-status rounded-pill">Kedaluwarsa</span></td>
-                            <td>
-                                <button class="btn btn-sm btn-light text-secondary me-1" data-bs-toggle="modal" data-bs-target="#editIdentitasModal">✏️</button>
-                                <button class="btn btn-sm btn-light text-danger" data-bs-toggle="modal" data-bs-target="#hapusIdentitasModal">🗑️</button>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td class="text-start fw-bold">SIM0001</td>
-                            <td>SIM</td>
-                            <td>Indonesia</td>
-                            <td>2021-04-12</td>
-                            <td>2026-04-12</td>
-                            <td><span class="badge bg-success badge-status rounded-pill">Aktif</span></td>
-                            <td>
-                                <button class="btn btn-sm btn-light text-secondary me-1" data-bs-toggle="modal" data-bs-target="#editIdentitasModal">✏️</button>
-                                <button class="btn btn-sm btn-light text-danger" data-bs-toggle="modal" data-bs-target="#hapusIdentitasModal">🗑️</button>
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-            
+        <div class="card-body p-4 table-responsive">
+            <table class="table table-hover table-custom mb-0 text-center">
+                <thead>
+                    <tr>
+                        <th class="text-start">No. Dokumen</th>
+                        <th>Jenis</th>
+                        <th>Negara</th>
+                        <th>Terbit</th>
+                        <th>Habis</th>
+                        <th>Status</th>
+                        <th>Aksi</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for i in identitas_list %}
+                    <tr>
+                        <td class="text-start fw-bold">{{ i.nomor }}</td>
+                        <td>{{ i.jenis }}</td>
+                        <td>{{ i.negara }}</td>
+                        <td>{{ i.terbit }}</td>
+                        <td>{{ i.habis }}</td>
+                        <td><span class="badge {% if i.status == 'Aktif' %}bg-success{% else %}bg-danger{% endif %} badge-status rounded-pill">{{ i.status }}</span></td>
+                        <td>
+                            <button class="btn btn-sm btn-light text-secondary me-1" onclick="siapkanEditIdentitas('{{ i.nomor }}', '{{ i.jenis }}', '{{ i.negara }}', '{{ i.terbit }}', '{{ i.habis }}')" data-bs-toggle="modal" data-bs-target="#editIdentitasModal">✏️</button>
+                            <button class="btn btn-sm btn-light text-danger" onclick="siapkanHapusIdentitas('{{ i.nomor }}')" data-bs-toggle="modal" data-bs-target="#hapusIdentitasModal">🗑️</button>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="7" class="text-center text-muted">Belum ada identitas yang didaftarkan.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
         </div>
     </div>
 </div>
 
-<div class="modal fade" id="tambahIdentitasModal" tabindex="-1" aria-hidden="true">
+<div class="modal fade" id="tambahIdentitasModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content rounded-4 border-0 shadow">
             <div class="modal-header border-bottom-0 pb-0">
                 <h5 class="modal-title fw-bold">Tambah Identitas Baru</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body p-4">
                 <form action="" method="POST">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="tambah">
                     <div class="mb-3">
                         <label class="form-label small fw-semibold">Nomor Dokumen</label>
-                        <input type="text" class="form-control" placeholder="Contoh: SIM0001" required>
+                        <input type="text" name="nomor_dokumen" class="form-control" required>
                     </div>
                     <div class="mb-3">
                         <label class="form-label small fw-semibold">Jenis Dokumen</label>
-                        <select class="form-select" required>
-                            <option value="" selected disabled>Pilih jenis</option>
+                        <select name="jenis_dokumen" class="form-select" required>
                             <option value="Paspor">Paspor</option>
                             <option value="KTP">KTP</option>
                             <option value="SIM">SIM</option>
@@ -115,69 +77,101 @@
                     </div>
                     <div class="mb-3">
                         <label class="form-label small fw-semibold">Negara Penerbit</label>
-                        <select class="form-select" required>
-                            <option value="" selected disabled>Pilih negara</option>
+                        <select name="negara_penerbit" class="form-select" required>
                             <option value="Indonesia">Indonesia</option>
+                            <option value="Malaysia">Malaysia</option>
+                            <option value="Singapura">Singapura</option>
+                            <option value="Thailand">Thailand</option>
+                            <option value="Jepang">Jepang</option>
+                            <option value="Korea Selatan">Korea Selatan</option>
+                            <option value="Amerika Serikat">Amerika Serikat</option>
+                            <option value="Inggris">Inggris</option>
+                        
                         </select>
                     </div>
                     <div class="row mb-4">
-                        <div class="col-md-6 mb-3 mb-md-0">
+                        <div class="col-md-6">
                             <label class="form-label small fw-semibold">Tanggal Terbit</label>
-                            <input type="date" class="form-control" required>
+                            <input type="date" name="tanggal_terbit" class="form-control" required>
                         </div>
                         <div class="col-md-6">
                             <label class="form-label small fw-semibold">Tanggal Habis</label>
-                            <input type="date" class="form-control" required>
+                            <input type="date" name="tanggal_habis" class="form-control" required>
                         </div>
                     </div>
-                    <div class="text-end">
-                        <button type="submit" class="btn btn-aeromiles px-4 rounded-3">Simpan</button>
-                    </div>
+                    <div class="text-end"><button type="submit" class="btn btn-aeromiles px-4 rounded-3">Simpan</button></div>
                 </form>
             </div>
         </div>
     </div>
 </div>
 
-<div class="modal fade" id="editIdentitasModal" tabindex="-1" aria-hidden="true">
+<div class="modal fade" id="editIdentitasModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content rounded-4 border-0 shadow">
             <div class="modal-header border-bottom-0 pb-0">
                 <h5 class="modal-title fw-bold">Edit Identitas</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body p-4">
                 <form action="" method="POST">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="edit">
+                    <input type="hidden" name="nomor_lama" id="edit_nomor_lama">
                     <div class="mb-3">
                         <label class="form-label small fw-semibold">Nomor Dokumen</label>
-                        <input type="text" class="form-control bg-light" value="SIM0001" readonly>
+                        <input type="text" name="nomor_dokumen" id="edit_nomor" class="form-control bg-light" readonly>
                     </div>
                     <div class="mb-3">
                         <label class="form-label small fw-semibold">Jenis Dokumen</label>
-                        <select class="form-select" required>
+                        <select name="jenis_dokumen" id="edit_jenis" class="form-select" required>
                             <option value="Paspor">Paspor</option>
                             <option value="KTP">KTP</option>
-                            <option value="SIM" selected>SIM</option>
+                            <option value="SIM">SIM</option>
                         </select>
                     </div>
                     <div class="mb-3">
                         <label class="form-label small fw-semibold">Negara Penerbit</label>
-                        <select class="form-select" required>
-                            <option value="Indonesia" selected>Indonesia</option>
+                        <select name="negara_penerbit" id="edit_negara" class="form-select" required>
+                            <option value="Indonesia">Indonesia</option>
+                            <option value="Malaysia">Malaysia</option>
+                            <option value="Singapura">Singapura</option>
+                            <option value="Thailand">Thailand</option>
+                            <option value="Jepang">Jepang</option>
+                            <option value="Korea Selatan">Korea Selatan</option>
+                            <option value="Amerika Serikat">Amerika Serikat</option>
+                            <option value="Inggris">Inggris</option>
                         </select>
                     </div>
                     <div class="row mb-4">
-                        <div class="col-md-6 mb-3 mb-md-0">
+                        <div class="col-md-6">
                             <label class="form-label small fw-semibold">Tanggal Terbit</label>
-                            <input type="date" class="form-control" value="2021-04-12" required>
+                            <input type="date" name="tanggal_terbit" id="edit_terbit" class="form-control" required>
                         </div>
                         <div class="col-md-6">
                             <label class="form-label small fw-semibold">Tanggal Habis</label>
-                            <input type="date" class="form-control" value="2026-04-12" required>
+                            <input type="date" name="tanggal_habis" id="edit_habis" class="form-control" required>
                         </div>
                     </div>
-                    <div class="text-end">
-                        <button type="submit" class="btn btn-aeromiles px-4 rounded-3">Simpan</button>
+                    <div class="text-end"><button type="submit" class="btn btn-aeromiles px-4 rounded-3">Simpan</button></div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="hapusIdentitasModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-4 border-0 shadow">
+            <div class="modal-body p-4 text-center">
+                <h5 class="fw-bold mb-3">Hapus Identitas?</h5>
+                <form action="" method="POST">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="hapus">
+                    <input type="hidden" name="nomor_lama" id="hapus_nomor_lama">
+                    <div class="d-flex justify-content-center gap-2">
+                        <button type="button" class="btn btn-light px-4 border rounded-3" data-bs-dismiss="modal">Batal</button>
+                        <button type="submit" class="btn btn-aeromiles px-4 rounded-3">Hapus</button>
                     </div>
                 </form>
             </div>
@@ -185,19 +179,17 @@
     </div>
 </div>
 
-<div class="modal fade" id="hapusIdentitasModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content rounded-4 border-0 shadow">
-            <div class="modal-body p-4 text-center">
-                <h5 class="fw-bold mb-3">Hapus Identitas?</h5>
-                <p class="text-secondary mb-4">Tindakan ini tidak dapat dibatalkan.</p>
-                <div class="d-flex justify-content-center gap-2">
-                    <button type="button" class="btn btn-light px-4 border rounded-3" data-bs-dismiss="modal">Batal</button>
-                    <button type="button" class="btn btn-aeromiles px-4 rounded-3">Hapus</button>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-{% endblock content %}
+<script>
+    function siapkanEditIdentitas(nomor, jenis, negara, terbit, habis) {
+        document.getElementById('edit_nomor_lama').value = nomor;
+        document.getElementById('edit_nomor').value = nomor;
+        document.getElementById('edit_jenis').value = jenis;
+        document.getElementById('edit_negara').value = negara;
+        document.getElementById('edit_terbit').value = terbit;
+        document.getElementById('edit_habis').value = habis;
+    }
+    function siapkanHapusIdentitas(nomor) {
+        document.getElementById('hapus_nomor_lama').value = nomor;
+    }
+</script>
+{% endblock %}
