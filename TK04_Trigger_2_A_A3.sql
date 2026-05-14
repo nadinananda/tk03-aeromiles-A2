@@ -6,7 +6,7 @@ CREATE OR REPLACE PROCEDURE sp_transfer_miles (
     p_email_pengirim VARCHAR,
     p_email_penerima VARCHAR,
     P_jumlah INT,
-    p_catatan VARCHAR,
+    p_catatan VARCHAR
 )
 LANGUAGE plpgsql
 AS $$
