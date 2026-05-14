@@ -1,17 +1,5 @@
 SET search_path TO aeromiles, public, extensions;
 
--- ============================================================================
--- Backend fitur hijau:
--- 8. CRUD Manajemen Claim Missing Miles Member
--- 9. RU Manajemen Claim Missing Miles Staf
--- 10. CR Transfer Miles antar Member
--- ============================================================================
-
--- ---------------------------------------------------------------------------
--- Helper untuk menghitung miles klaim berdasarkan rute dan kelas kabin.
--- Rute domestik diberi base 1000 miles, rute internasional base 2500 miles.
--- Kelas Economy = 1x, Premium Economy = 1.5x, Business = 2x, First = 3x.
--- ---------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION fn_hitung_missing_miles(
     p_bandara_asal CHAR(3),
     p_bandara_tujuan CHAR(3),
@@ -67,11 +55,6 @@ BEGIN
 END;
 $$;
 
--- ---------------------------------------------------------------------------
--- Stored procedure untuk staf memproses klaim missing miles.
--- Jika klaim disetujui, award_miles dan total_miles member otomatis bertambah.
--- Jika klaim ditolak, hanya status klaim dan email staf yang berubah.
--- ---------------------------------------------------------------------------
 CREATE OR REPLACE PROCEDURE sp_proses_claim_missing_miles(
     p_id_klaim INT,
     p_email_staf VARCHAR,
@@ -133,11 +116,6 @@ BEGIN
 END;
 $$;
 
--- ---------------------------------------------------------------------------
--- Stored procedure untuk transfer miles antar member.
--- Validasi saldo, penerima, jumlah, dan larangan transfer ke diri sendiri
--- dilakukan di database agar transaksi lebih aman.
--- ---------------------------------------------------------------------------
 CREATE OR REPLACE PROCEDURE sp_transfer_miles(
     p_email_pengirim VARCHAR,
     p_email_penerima VARCHAR,
@@ -216,11 +194,6 @@ BEGIN
 END;
 $$;
 
-
--- ---------------------------------------------------------------------------
--- Pastikan kelas kabin Premium Economy diterima pada database yang sudah dibuat.
--- Aman dijalankan berulang karena constraint lama di-drop dulu jika ada.
--- ---------------------------------------------------------------------------
 ALTER TABLE IF EXISTS claim_missing_miles
 DROP CONSTRAINT IF EXISTS claim_missing_miles_kelas_kabin_check;
 
