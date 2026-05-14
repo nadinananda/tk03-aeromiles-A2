@@ -179,7 +179,7 @@ function showKonfirmasi(id, status, nama, asal, tujuan, kelas) {
     <strong>Rute:</strong> ${asal} → ${tujuan}<br>
     <strong>Kelas:</strong> ${kelas}
   `;
-  const url = `/staf/klaim/${id}/status/`;
+  const url = `/kelola-klaim/update/${id}/`;
   if (status === 'Disetujui') {
     document.getElementById('setujuiDetail').innerHTML = detail;
     document.getElementById('formSetujui').action = url;
