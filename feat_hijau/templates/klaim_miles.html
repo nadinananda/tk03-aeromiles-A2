@@ -275,10 +275,10 @@
 {% block extra_js %}
 <script>
 function loadEditKlaim(id) {
-  fetch(`/klaim/${id}/json/`)
+  fetch(`/klaim/detail/${id}/`)
     .then(r => r.json())
     .then(d => {
-      document.getElementById('formEditKlaim').action = `/klaim/${id}/edit/`;
+      document.getElementById('formEditKlaim').action = `/klaim/edit/${id}/`;
       document.getElementById('edit_maskapai').value = d.maskapai;
       document.getElementById('edit_kelas').value = d.kelas_kabin;
       document.getElementById('edit_bandara_asal').value = d.bandara_asal;
@@ -291,7 +291,7 @@ function loadEditKlaim(id) {
 }
 
 function setHapusId(id) {
-  document.getElementById('formHapus').action = `/klaim/${id}/hapus/`;
+  document.getElementById('formHapus').action = `/klaim/hapus/${id}/`;
 }
 </script>
 {% endblock %}
