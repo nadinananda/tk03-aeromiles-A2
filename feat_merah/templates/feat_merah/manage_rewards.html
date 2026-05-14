@@ -1,301 +1,214 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<section class="page-heading page-heading-row">
+<section class="page-heading page-heading-row mb-4">
     <div>
         <h1>Kelola Hadiah &amp; Penyedia</h1>
-        <p>Daftar hadiah, penyedia, miles, periode valid, dan status program.</p>
+        <p>Dashboard manajemen katalog hadiah program AeroMiles.</p>
     </div>
-    <button class="btn btn-primary" type="button" id="addRewardButton">
+    <button class="btn btn-primary" type="button" 
+            data-bs-toggle="modal" data-bs-target="#rewardFormModal" id="btnTambahHadiah">
         <i class="bi bi-plus-lg me-1"></i>Tambah Hadiah
     </button>
 </section>
 
-<section class="filter-bar" aria-label="Filter hadiah">
-    <div>
-        <label class="form-label" for="providerFilter">Penyedia</label>
-        <select class="form-select" id="providerFilter">
-            <option value="all">Semua penyedia</option>
-        </select>
-    </div>
-    <div>
-        <label class="form-label" for="statusFilter">Status</label>
-        <select class="form-select" id="statusFilter">
-            <option value="all">Semua status</option>
-            <option value="Aktif">Aktif</option>
-            <option value="Akan Datang">Akan Datang</option>
-            <option value="Selesai">Selesai</option>
-        </select>
-    </div>
-</section>
+{% if success %}
+<div class="alert alert-success alert-dismissible fade show" role="alert">
+    {{ success }}
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+{% endif %}
 
-<section class="table-card">
+{% if error %}
+<div class="alert alert-danger alert-dismissible fade show" role="alert">
+    {{ error }}
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+{% endif %}
+
+<section class="table-card shadow-sm border-0">
     <div class="table-responsive">
         <table class="table align-middle">
-            <thead>
+            <thead class="table-light">
                 <tr>
                     <th>Kode</th>
-                    <th>Nama</th>
-                    <th>Deskripsi</th>
-                    <th>Penyedia</th>
+                    <th>Nama Hadiah</th>
                     <th class="text-end">Miles</th>
-                    <th>Periode</th>
+                    <th>Periode Valid</th>
                     <th>Status</th>
                     <th class="text-center">Aksi</th>
                 </tr>
             </thead>
-            <tbody id="rewardTableBody"></tbody>
+            <tbody id="tabelHadiahBody">
+                {% for reward in hadiah_list %}
+                <tr>
+                    <td><strong>{{ reward.kode_hadiah }}</strong></td>
+                    <td>
+                        <div class="fw-bold">{{ reward.nama }}</div>
+                        <div class="text-muted small text-truncate" style="max-width: 200px;">{{ reward.deskripsi }}</div>
+                    </td>
+                    <td class="text-end fw-semibold">{{ reward.miles }}</td>
+                    <td><small>{{ reward.valid_start_date|date:"Y-m-d" }} s/d {{ reward.program_end|date:"Y-m-d" }}</small></td>
+                    <td>
+                        <span class="badge {% if reward.status == 'Aktif' %}text-bg-success{% elif reward.status == 'Akan Datang' %}text-bg-warning{% else %}text-bg-secondary{% endif %}">
+                            {{ reward.status }}
+                        </span>
+                    </td>
+                    <td class="text-center">
+                        <button class="btn btn-sm btn-outline-secondary me-1" type="button"
+                                data-bs-toggle="modal" data-bs-target="#rewardFormModal"
+                                data-edit="{{ reward.kode_hadiah }}" 
+                                data-nama="{{ reward.nama }}" 
+                                data-miles="{{ reward.miles }}" 
+                                data-desk="{{ reward.deskripsi }}" 
+                                data-start="{{ reward.valid_start_date|date:'Y-m-d' }}" 
+                                data-end="{{ reward.program_end|date:'Y-m-d' }}"
+                                data-provider="{{ reward.id_penyedia }}">
+                            <i class="bi bi-pencil-fill"></i> Edit
+                        </button>
+                        <button class="btn btn-sm btn-outline-danger" type="button"
+                                data-bs-toggle="modal" data-bs-target="#deleteRewardModal"
+                                data-delete="{{ reward.kode_hadiah }}">
+                            <i class="bi bi-trash-fill"></i>
+                        </button>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="6" class="text-center text-muted py-4">Belum ada hadiah</td>
+                </tr>
+                {% endfor %}
+            </tbody>
         </table>
     </div>
 </section>
 
-<div class="modal fade" id="rewardFormModal" tabindex="-1" aria-labelledby="rewardFormTitle" aria-hidden="true">
+<div class="modal fade" id="rewardFormModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
-        <form class="modal-content" id="rewardForm">
+        <form method="POST" action="{% url 'feat_merah:manage_rewards' %}" class="modal-content">
+            {% csrf_token %}
+            <input type="hidden" name="action" id="formAction" value="create">
+            <input type="hidden" name="kode_hadiah" id="hiddenRewardCode">
+            
             <div class="modal-header border-0 pb-0">
-                <h2 class="modal-title fs-5" id="rewardFormTitle">Tambah Hadiah Baru</h2>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup"></button>
+                <h5 class="modal-title fw-bold" id="rewardFormTitle">Tambah Hadiah Baru</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
                 <div class="row g-3">
-                    <div class="col-md-5">
-                        <label class="form-label" for="rewardCode">Kode Hadiah</label>
-                        <input class="form-control" id="rewardCode" type="text" placeholder="Otomatis" readonly>
+                    <div class="col-md-4">
+                        <label class="form-label small fw-bold">Kode</label>
+                        <input type="text" class="form-control bg-light" id="rewardCode" placeholder="Auto" disabled>
+                    </div>
+                    <div class="col-md-8">
+                        <label class="form-label small fw-bold">Nama Hadiah</label>
+                        <input type="text" name="nama" id="rewardName" class="form-control" required>
                     </div>
                     <div class="col-md-7">
-                        <label class="form-label" for="rewardName">Nama Hadiah</label>
-                        <input class="form-control" id="rewardName" type="text" required>
-                    </div>
-                    <div class="col-md-7">
-                        <label class="form-label" for="rewardProvider">Penyedia</label>
-                        <select class="form-select" id="rewardProvider" required></select>
+                        <label class="form-label small fw-bold">Penyedia</label>
+                        <select name="id_penyedia" id="rewardProvider" class="form-select" required>
+                            <option value="">Pilih Penyedia...</option>
+                            {% for provider in providers %}
+                            <option value="{{ provider.id }}">Provider #{{ provider.id }}</option>
+                            {% endfor %}
+                        </select>
                     </div>
                     <div class="col-md-5">
-                        <label class="form-label" for="rewardMiles">Miles Dibutuhkan</label>
-                        <input class="form-control" id="rewardMiles" type="number" min="1" step="1" required>
+                        <label class="form-label small fw-bold">Miles Dibutuhkan</label>
+                        <input type="number" name="miles" id="rewardMiles" class="form-control" required>
                     </div>
                     <div class="col-12">
-                        <label class="form-label" for="rewardDescription">Deskripsi</label>
-                        <textarea class="form-control" id="rewardDescription" rows="3" required></textarea>
+                        <label class="form-label small fw-bold">Deskripsi</label>
+                        <textarea name="deskripsi" id="rewardDescription" class="form-control" rows="2" required></textarea>
                     </div>
                     <div class="col-md-6">
-                        <label class="form-label" for="rewardValidStart">Valid Start</label>
-                        <input class="form-control" id="rewardValidStart" type="date" required>
+                        <label class="form-label small fw-bold">Valid Start</label>
+                        <input type="date" name="valid_start" id="rewardValidStart" class="form-control" required>
                     </div>
                     <div class="col-md-6">
-                        <label class="form-label" for="rewardProgramEnd">Program End</label>
-                        <input class="form-control" id="rewardProgramEnd" type="date" required>
+                        <label class="form-label small fw-bold">Program End</label>
+                        <input type="date" name="program_end" id="rewardProgramEnd" class="form-control" required>
                     </div>
                 </div>
             </div>
             <div class="modal-footer border-0">
                 <button type="button" class="btn btn-light" data-bs-dismiss="modal">Batal</button>
-                <button type="submit" class="btn btn-primary">Simpan</button>
+                <button type="submit" class="btn btn-primary px-4" id="btnSubmitForm">Tambah Hadiah</button>
             </div>
         </form>
     </div>
 </div>
 
-<div class="modal fade" id="deleteRewardModal" tabindex="-1" aria-labelledby="deleteRewardTitle" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header border-0 pb-0">
-                <h2 class="modal-title fs-5" id="deleteRewardTitle">Hapus Hadiah?</h2>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup"></button>
+<div class="modal fade" id="deleteRewardModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <form method="POST" action="{% url 'feat_merah:manage_rewards' %}" class="modal-content">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="delete">
+            <input type="hidden" name="kode_hadiah" id="deleteRewardCode">
+            <div class="modal-body text-center p-4">
+                <h5 class="fw-bold">Hapus Hadiah?</h5>
+                <p class="text-muted small">Hadiah hanya dapat dihapus setelah periode berakhir.</p>
+                <div class="d-flex gap-2 justify-content-center mt-4">
+                    <button type="button" class="btn btn-light w-50" data-bs-dismiss="modal">Batal</button>
+                    <button type="submit" class="btn btn-danger w-50">Hapus</button>
+                </div>
             </div>
-            <div class="modal-body">
-                <p class="mb-2">Jika hadiah sudah pernah di-redeem oleh Member, riwayat redeem akan tetap tercatat.</p>
-                <div class="small text-danger d-none" id="deleteRewardFeedback"></div>
-            </div>
-            <div class="modal-footer border-0">
-                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Batal</button>
-                <button type="button" class="btn btn-primary" id="confirmDeleteReward">Hapus</button>
-            </div>
-        </div>
+        </form>
     </div>
 </div>
-
-{{ providers|json_script:"provider-data" }}
-{{ rewards|json_script:"reward-data" }}
-{{ today|json_script:"reward-today-data" }}
 {% endblock content %}
 
 {% block scripts %}
 <script>
-    const providers = JSON.parse(document.getElementById("provider-data").textContent);
-    const rewards = JSON.parse(document.getElementById("reward-data").textContent);
-    const today = JSON.parse(document.getElementById("reward-today-data").textContent);
+    document.addEventListener("DOMContentLoaded", function() {
+        const rewardFormModal = document.getElementById('rewardFormModal');
 
-    const tableBody = document.getElementById("rewardTableBody");
-    const providerFilter = document.getElementById("providerFilter");
-    const statusFilter = document.getElementById("statusFilter");
-    const rewardForm = document.getElementById("rewardForm");
-    const rewardModal = new bootstrap.Modal(document.getElementById("rewardFormModal"));
-    const deleteModal = new bootstrap.Modal(document.getElementById("deleteRewardModal"));
-    const deleteFeedback = document.getElementById("deleteRewardFeedback");
-    let editingCode = null;
-    let deletingCode = null;
+        rewardFormModal.addEventListener('show.bs.modal', function (event) {
+            const button = event.relatedTarget; 
+            const isEdit = button.hasAttribute('data-edit');
+            
+            const title = document.getElementById('rewardFormTitle');
+            const actionInput = document.getElementById('formAction');
+            const codeInput = document.getElementById('rewardCode');
+            const hiddenCodeInput = document.getElementById('hiddenRewardCode');
+            const submitBtn = document.getElementById('btnSubmitForm');
 
-    function escapeHtml(value) {
-        return String(value)
-            .replaceAll("&", "&amp;")
-            .replaceAll("<", "&lt;")
-            .replaceAll(">", "&gt;")
-            .replaceAll('"', "&quot;")
-            .replaceAll("'", "&#039;");
-    }
-
-    function formatMiles(value) {
-        return new Intl.NumberFormat("id-ID").format(value);
-    }
-
-    function providerById(providerId) {
-        return providers.find((provider) => Number(provider.id) === Number(providerId));
-    }
-
-    function rewardStatus(reward) {
-        if (reward.valid_start > today) return "Akan Datang";
-        if (reward.program_end < today) return "Selesai";
-        return "Aktif";
-    }
-
-    function statusClass(status) {
-        if (status === "Aktif") return "success";
-        if (status === "Akan Datang") return "info";
-        return "secondary";
-    }
-
-    function generateRewardCode() {
-        const nextNumber = rewards.reduce((max, reward) => {
-            const number = Number(reward.code.replace("RWD-", ""));
-            return Math.max(max, number);
-        }, 0) + 1;
-        return `RWD-${String(nextNumber).padStart(3, "0")}`;
-    }
-
-    function populateProviderSelects() {
-        providers.forEach((provider) => {
-            providerFilter.add(new Option(provider.name, provider.id));
-            document.getElementById("rewardProvider").add(
-                new Option(`${provider.name} (${provider.category})`, provider.id)
-            );
+            if (isEdit) {
+                title.textContent = "Edit Hadiah"; 
+                submitBtn.textContent = "Update Hadiah";
+                actionInput.value = "update";
+                
+                const kode = button.getAttribute('data-edit');
+                codeInput.value = kode;
+                hiddenCodeInput.value = kode;
+                
+                document.getElementById('rewardName').value = button.getAttribute('data-nama');
+                document.getElementById('rewardProvider').value = button.getAttribute('data-provider');
+                document.getElementById('rewardMiles').value = button.getAttribute('data-miles');
+                document.getElementById('rewardDescription').value = button.getAttribute('data-desk');
+                document.getElementById('rewardValidStart').value = button.getAttribute('data-start');
+                document.getElementById('rewardProgramEnd').value = button.getAttribute('data-end');
+            } else {
+                title.textContent = "Tambah Hadiah Baru";
+                submitBtn.textContent = "Tambah Hadiah";
+                actionInput.value = "create";
+                
+                hiddenCodeInput.value = "";
+                codeInput.value = "";
+                document.getElementById('rewardName').value = "";
+                document.getElementById('rewardProvider').value = "";
+                document.getElementById('rewardMiles').value = "";
+                document.getElementById('rewardDescription').value = "";
+                document.getElementById('rewardValidStart').value = "";
+                document.getElementById('rewardProgramEnd').value = "";
+            }
         });
-    }
 
-    function renderRewards() {
-        const selectedProvider = providerFilter.value;
-        const selectedStatus = statusFilter.value;
-        tableBody.innerHTML = "";
-
-        rewards
-            .filter((reward) => selectedProvider === "all" || String(reward.provider_id) === selectedProvider)
-            .filter((reward) => selectedStatus === "all" || rewardStatus(reward) === selectedStatus)
-            .forEach((reward) => {
-                const provider = providerById(reward.provider_id);
-                const status = rewardStatus(reward);
-                const row = document.createElement("tr");
-                row.innerHTML = `
-                    <td><strong>${escapeHtml(reward.code)}</strong></td>
-                    <td>${escapeHtml(reward.name)}</td>
-                    <td class="text-muted small">${escapeHtml(reward.description)}</td>
-                    <td>
-                        ${escapeHtml(provider ? provider.name : "-")}
-                        <span class="provider-chip">${escapeHtml(provider ? provider.category : "-")}</span>
-                    </td>
-                    <td class="text-end">${formatMiles(reward.miles)}</td>
-                    <td>${escapeHtml(reward.valid_start)} - ${escapeHtml(reward.program_end)}</td>
-                    <td><span class="badge text-bg-${statusClass(status)}">${status}</span></td>
-                    <td class="text-center">
-                        <button class="icon-button" type="button" data-edit="${escapeHtml(reward.code)}" title="Edit hadiah" aria-label="Edit hadiah">
-                            <i class="bi bi-pencil-fill"></i>
-                        </button>
-                        <button class="icon-button danger" type="button" data-delete="${escapeHtml(reward.code)}" title="Hapus hadiah" aria-label="Hapus hadiah">
-                            <i class="bi bi-trash-fill"></i>
-                        </button>
-                    </td>
-                `;
-                tableBody.appendChild(row);
-            });
-    }
-
-    function openRewardForm(reward = null) {
-        rewardForm.reset();
-        editingCode = reward ? reward.code : null;
-        document.getElementById("rewardFormTitle").textContent = reward ? "Edit Hadiah" : "Tambah Hadiah Baru";
-        document.getElementById("rewardCode").value = reward ? reward.code : "";
-
-        if (reward) {
-            document.getElementById("rewardName").value = reward.name;
-            document.getElementById("rewardProvider").value = reward.provider_id;
-            document.getElementById("rewardMiles").value = reward.miles;
-            document.getElementById("rewardDescription").value = reward.description;
-            document.getElementById("rewardValidStart").value = reward.valid_start;
-            document.getElementById("rewardProgramEnd").value = reward.program_end;
-        }
-
-        rewardModal.show();
-    }
-
-    document.getElementById("addRewardButton").addEventListener("click", () => openRewardForm());
-    providerFilter.addEventListener("change", renderRewards);
-    statusFilter.addEventListener("change", renderRewards);
-
-    tableBody.addEventListener("click", (event) => {
-        const editButton = event.target.closest("[data-edit]");
-        const deleteButton = event.target.closest("[data-delete]");
-
-        if (editButton) {
-            const reward = rewards.find((item) => item.code === editButton.dataset.edit);
-            openRewardForm(reward);
-        }
-
-        if (deleteButton) {
-            deletingCode = deleteButton.dataset.delete;
-            deleteFeedback.classList.add("d-none");
-            deleteModal.show();
-        }
+        const deleteRewardModal = document.getElementById('deleteRewardModal');
+        deleteRewardModal.addEventListener('show.bs.modal', function (event) {
+            const button = event.relatedTarget;
+            document.getElementById('deleteRewardCode').value = button.getAttribute('data-delete');
+        });
     });
-
-    rewardForm.addEventListener("submit", (event) => {
-        event.preventDefault();
-
-        const payload = {
-            code: editingCode || generateRewardCode(),
-            name: document.getElementById("rewardName").value.trim(),
-            provider_id: Number(document.getElementById("rewardProvider").value),
-            miles: Number(document.getElementById("rewardMiles").value),
-            description: document.getElementById("rewardDescription").value.trim(),
-            valid_start: document.getElementById("rewardValidStart").value,
-            program_end: document.getElementById("rewardProgramEnd").value,
-        };
-
-        if (editingCode) {
-            const index = rewards.findIndex((reward) => reward.code === editingCode);
-            rewards[index] = payload;
-        } else {
-            rewards.push(payload);
-        }
-
-        renderRewards();
-        rewardModal.hide();
-    });
-
-    document.getElementById("confirmDeleteReward").addEventListener("click", () => {
-        const reward = rewards.find((item) => item.code === deletingCode);
-        if (!reward) return;
-
-        if (reward.program_end >= today) {
-            deleteFeedback.textContent = "Hadiah hanya dapat dihapus jika periode program sudah selesai.";
-            deleteFeedback.classList.remove("d-none");
-            return;
-        }
-
-        rewards.splice(rewards.indexOf(reward), 1);
-        renderRewards();
-        deleteModal.hide();
-    });
-
-    populateProviderSelects();
-    renderRewards();
 </script>
 {% endblock scripts %}

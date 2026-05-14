@@ -1,209 +1,187 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<section class="page-heading page-heading-row">
+<section class="page-heading page-heading-row mb-4">
     <div>
         <h1>Kelola Mitra</h1>
-        <p>Daftar mitra AeroMiles beserta ID penyedia dan tanggal kerja sama.</p>
+        <p>Dashboard manajemen data mitra strategis program AeroMiles.</p>
     </div>
-    <button class="btn btn-primary" type="button" id="addPartnerButton">
-        <i class="bi bi-plus-lg me-1"></i>Tambah Mitra
+    <button class="btn btn-primary fw-bold px-4 rounded-3" type="button" 
+            data-bs-toggle="modal" data-bs-target="#partnerFormModal" id="btnTambahMitra">
+        <i class="bi bi-plus-lg me-1"></i>TAMBAH MITRA
     </button>
 </section>
 
-<section class="table-card table-card-narrow">
-    <div class="table-responsive">
-        <table class="table align-middle">
-            <thead>
-                <tr>
-                    <th>Email Mitra</th>
-                    <th>ID Penyedia</th>
-                    <th>Nama Mitra</th>
-                    <th>Tanggal Kerja Sama</th>
-                    <th class="text-center">Aksi</th>
-                </tr>
-            </thead>
-            <tbody id="partnerTableBody"></tbody>
-        </table>
-    </div>
+{% if success %}
+<div class="alert alert-success alert-dismissible fade show" role="alert">
+    {{ success }}
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+{% endif %}
+
+{% if error %}
+<div class="alert alert-danger alert-dismissible fade show" role="alert">
+    {{ error }}
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+{% endif %}
+
+<section class="table-card bg-white rounded-4 shadow-sm border-0 p-2 table-responsive">
+    <table class="table align-middle mb-0">
+        <thead class="table-light">
+            <tr>
+                <th class="py-3 px-4">Email Mitra</th>
+                <th class="py-3 px-4">ID Penyedia</th>
+                <th class="py-3 px-4">Nama Mitra</th>
+                <th class="py-3 px-4">Tanggal Kerja Sama</th>
+                <th class="py-3 px-4">Hadiah</th>
+                <th class="py-3 px-4 text-center">Aksi</th>
+            </tr>
+        </thead>
+        <tbody id="partnerTableBody">
+            {% for partner in partners %}
+            <tr>
+                <td class="fw-bold py-3 px-4">{{ partner.email_mitra }}</td>
+                <td class="py-3 px-4"><span class="badge bg-dark rounded-pill px-3">{{ partner.id_penyedia }}</span></td>
+                <td class="py-3 px-4">{{ partner.nama_mitra }}</td>
+                <td class="text-muted py-3 px-4">{{ partner.tanggal_kerja_sama|date:"Y-m-d" }}</td>
+                <td class="py-3 px-4">{{ partner.hadiah_count }} hadiah</td>
+                <td class="text-center py-3 px-4">
+                    <button class="btn btn-sm btn-outline-secondary me-1" type="button"
+                            data-bs-toggle="modal" data-bs-target="#partnerFormModal"
+                            data-edit="{{ partner.email_mitra }}" 
+                            data-nama="{{ partner.nama_mitra }}" 
+                            data-id="{{ partner.id_penyedia }}"
+                            data-tanggal="{{ partner.tanggal_kerja_sama|date:'Y-m-d' }}">
+                        <i class="bi bi-pencil-fill"></i> Edit
+                    </button>
+                    <button class="btn btn-sm btn-outline-danger" type="button"
+                            data-bs-toggle="modal" data-bs-target="#deletePartnerModal"
+                            data-delete="{{ partner.email_mitra }}">
+                        <i class="bi bi-trash-fill"></i>
+                    </button>
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="6" class="text-center text-muted py-4">Belum ada mitra terdaftar</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
 </section>
 
-<div class="modal fade" id="partnerFormModal" tabindex="-1" aria-labelledby="partnerFormTitle" aria-hidden="true">
+<div class="modal fade" id="partnerFormModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
-        <form class="modal-content" id="partnerForm">
-            <div class="modal-header border-0 pb-0">
-                <h2 class="modal-title fs-5" id="partnerFormTitle">Tambah Mitra Baru</h2>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup"></button>
+        <form method="POST" action="{% url 'feat_merah:manage_partners' %}" id="formPartner" class="modal-content rounded-4 border-0 shadow">
+            {% csrf_token %}
+            <input type="hidden" name="action" id="formAction" value="create">
+            
+            <div class="modal-header border-0 pb-0 px-4 pt-4">
+                <h5 class="modal-title fw-bold" id="partnerFormTitle">Tambah Mitra Baru</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <div class="modal-body">
+            <div class="modal-body px-4 py-3">
                 <div class="row g-3">
-                    <div class="col-md-7">
-                        <label class="form-label" for="partnerEmail">Email Mitra</label>
-                        <input class="form-control" id="partnerEmail" type="email" required>
+                    <div class="col-12">
+                        <label class="form-label small fw-bold">Email Mitra</label>
+                        <input type="email" name="email" id="partnerEmail" class="form-control rounded-3" required>
                     </div>
-                    <div class="col-md-5">
-                        <label class="form-label" for="partnerProviderId">ID Penyedia</label>
-                        <input class="form-control" id="partnerProviderId" type="text" placeholder="Otomatis" readonly>
+                    <div class="col-md-6">
+                        <label class="form-label small fw-bold">ID Penyedia</label>
+                        <input type="text" id="providerId" class="form-control rounded-3 bg-light" placeholder="Otomatis" disabled>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small fw-bold">Tanggal Kerja Sama</label>
+                        <input type="date" name="tanggal_kerja_sama" id="coopDate" class="form-control rounded-3" required>
                     </div>
                     <div class="col-12">
-                        <label class="form-label" for="partnerName">Nama Mitra</label>
-                        <input class="form-control" id="partnerName" type="text" required>
-                    </div>
-                    <div class="col-12">
-                        <label class="form-label" for="partnerCooperationDate">Tanggal Kerja Sama</label>
-                        <input class="form-control" id="partnerCooperationDate" type="date" required>
+                        <label class="form-label small fw-bold">Nama Mitra</label>
+                        <input type="text" name="nama" id="partnerName" class="form-control rounded-3" required>
                     </div>
                 </div>
-                <div class="small text-danger d-none mt-3" id="partnerFormFeedback"></div>
             </div>
-            <div class="modal-footer border-0">
-                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Batal</button>
-                <button type="submit" class="btn btn-primary">Simpan</button>
+            <div class="modal-footer border-0 px-4 pb-4">
+                <button type="button" class="btn btn-light rounded-3" data-bs-dismiss="modal">Batal</button>
+                <button type="submit" class="btn btn-primary rounded-3 px-4" id="btnSubmitForm">Simpan</button>
             </div>
         </form>
     </div>
 </div>
 
-<div class="modal fade" id="deletePartnerModal" tabindex="-1" aria-labelledby="deletePartnerTitle" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header border-0 pb-0">
-                <h2 class="modal-title fs-5" id="deletePartnerTitle">Hapus Mitra?</h2>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup"></button>
+<div class="modal fade" id="deletePartnerModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <form method="POST" action="{% url 'feat_merah:manage_partners' %}" class="modal-content rounded-4 border-0 shadow">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="delete">
+            <input type="hidden" name="email" id="deletePartnerEmail">
+            <div class="modal-body text-center p-4">
+                <h5 class="fw-bold">Hapus Mitra?</h5>
+                <p class="text-muted small">Penghapusan mitra akan berpengaruh pada hadiah yang disediakan oleh mitra ini.</p>
+                <div class="d-flex gap-2 justify-content-center mt-4">
+                    <button type="button" class="btn btn-light w-50 rounded-3" data-bs-dismiss="modal">Batal</button>
+                    <button type="submit" class="btn btn-danger w-50 rounded-3">Hapus</button>
+                </div>
             </div>
-            <div class="modal-body">
-                <p class="mb-0">Penghapusan mitra akan berpengaruh pada hadiah yang disediakan oleh mitra ini.</p>
-            </div>
-            <div class="modal-footer border-0">
-                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Batal</button>
-                <button type="button" class="btn btn-primary" id="confirmDeletePartner">Hapus</button>
-            </div>
-        </div>
+        </form>
     </div>
 </div>
-
-{{ partners|json_script:"partner-data" }}
-{{ next_provider_id|json_script:"next-provider-id-data" }}
 {% endblock content %}
 
 {% block scripts %}
 <script>
-    const partners = JSON.parse(document.getElementById("partner-data").textContent);
-    let nextProviderId = Number(JSON.parse(document.getElementById("next-provider-id-data").textContent));
-    let editingEmail = null;
-    let deletingEmail = null;
+    document.addEventListener("DOMContentLoaded", function() {
+        const partnerFormModal = document.getElementById('partnerFormModal');
 
-    const partnerTableBody = document.getElementById("partnerTableBody");
-    const partnerForm = document.getElementById("partnerForm");
-    const partnerModal = new bootstrap.Modal(document.getElementById("partnerFormModal"));
-    const deletePartnerModal = new bootstrap.Modal(document.getElementById("deletePartnerModal"));
-    const partnerFeedback = document.getElementById("partnerFormFeedback");
+       
+        partnerFormModal.addEventListener('show.bs.modal', function (event) {
+            const button = event.relatedTarget; 
+            const isEdit = button.hasAttribute('data-edit');
+            
+            const title = document.getElementById('partnerFormTitle');
+            const actionInput = document.getElementById('formAction');
+            const emailInput = document.getElementById('partnerEmail');
+            const providerInput = document.getElementById('providerId');
+            const nameInput = document.getElementById('partnerName');
+            const dateInput = document.getElementById('coopDate');
+            const submitBtn = document.getElementById('btnSubmitForm');
 
-    function escapeHtml(value) {
-        return String(value)
-            .replaceAll("&", "&amp;")
-            .replaceAll("<", "&lt;")
-            .replaceAll(">", "&gt;")
-            .replaceAll('"', "&quot;")
-            .replaceAll("'", "&#039;");
-    }
-
-    function renderPartners() {
-        partnerTableBody.innerHTML = "";
-
-        partners.forEach((partner) => {
-            const row = document.createElement("tr");
-            row.innerHTML = `
-                <td><strong>${escapeHtml(partner.email)}</strong></td>
-                <td>${escapeHtml(partner.provider_id)}</td>
-                <td>${escapeHtml(partner.name)}</td>
-                <td>${escapeHtml(partner.cooperation_date)}</td>
-                <td class="text-center">
-                    <button class="icon-button" type="button" data-edit="${escapeHtml(partner.email)}" title="Edit mitra" aria-label="Edit mitra">
-                        <i class="bi bi-pencil-fill"></i>
-                    </button>
-                    <button class="icon-button danger" type="button" data-delete="${escapeHtml(partner.email)}" title="Hapus mitra" aria-label="Hapus mitra">
-                        <i class="bi bi-trash-fill"></i>
-                    </button>
-                </td>
-            `;
-            partnerTableBody.appendChild(row);
+            if (isEdit) {
+               
+                title.textContent = "Edit Informasi Mitra"; 
+                submitBtn.textContent = "Simpan Perubahan";
+                actionInput.value = "update";
+                
+                const email = button.getAttribute('data-edit');
+                emailInput.value = email;
+                emailInput.readOnly = true;
+                emailInput.classList.add('bg-light');
+                
+                providerInput.value = button.getAttribute('data-id');
+                nameInput.value = button.getAttribute('data-nama');
+                dateInput.value = button.getAttribute('data-tanggal');
+            } else {
+               
+                title.textContent = "Tambah Mitra Baru";
+                submitBtn.textContent = "Simpan";
+                actionInput.value = "create";
+                
+              
+                emailInput.value = "";
+                emailInput.readOnly = false;
+                emailInput.classList.remove('bg-light');
+                providerInput.value = "";
+                nameInput.value = "";
+                dateInput.value = "";
+            }
         });
-    }
 
-    function openPartnerForm(partner = null) {
-        partnerForm.reset();
-        partnerFeedback.classList.add("d-none");
-        editingEmail = partner ? partner.email : null;
-
-        document.getElementById("partnerFormTitle").textContent = partner ? "Edit Mitra" : "Tambah Mitra Baru";
-        document.getElementById("partnerEmail").readOnly = Boolean(partner);
-        document.getElementById("partnerEmail").value = partner ? partner.email : "";
-        document.getElementById("partnerProviderId").value = partner ? partner.provider_id : "";
-        document.getElementById("partnerName").value = partner ? partner.name : "";
-        document.getElementById("partnerCooperationDate").value = partner ? partner.cooperation_date : "";
-
-        partnerModal.show();
-    }
-
-    document.getElementById("addPartnerButton").addEventListener("click", () => openPartnerForm());
-
-    partnerTableBody.addEventListener("click", (event) => {
-        const editButton = event.target.closest("[data-edit]");
-        const deleteButton = event.target.closest("[data-delete]");
-
-        if (editButton) {
-            const partner = partners.find((item) => item.email === editButton.dataset.edit);
-            openPartnerForm(partner);
-        }
-
-        if (deleteButton) {
-            deletingEmail = deleteButton.dataset.delete;
-            deletePartnerModal.show();
-        }
+    
+        const deletePartnerModal = document.getElementById('deletePartnerModal');
+        deletePartnerModal.addEventListener('show.bs.modal', function (event) {
+            const button = event.relatedTarget;
+            document.getElementById('deletePartnerEmail').value = button.getAttribute('data-delete');
+        });
     });
-
-    partnerForm.addEventListener("submit", (event) => {
-        event.preventDefault();
-
-        const email = document.getElementById("partnerEmail").value.trim().toLowerCase();
-        const duplicate = partners.some((partner) => partner.email === email && partner.email !== editingEmail);
-
-        if (duplicate) {
-            partnerFeedback.textContent = "Email mitra sudah terdaftar.";
-            partnerFeedback.classList.remove("d-none");
-            return;
-        }
-
-        const payload = {
-            email,
-            provider_id: editingEmail
-                ? Number(document.getElementById("partnerProviderId").value)
-                : nextProviderId++,
-            name: document.getElementById("partnerName").value.trim(),
-            cooperation_date: document.getElementById("partnerCooperationDate").value,
-        };
-
-        if (editingEmail) {
-            const index = partners.findIndex((partner) => partner.email === editingEmail);
-            partners[index] = payload;
-        } else {
-            partners.push(payload);
-        }
-
-        renderPartners();
-        partnerModal.hide();
-    });
-
-    document.getElementById("confirmDeletePartner").addEventListener("click", () => {
-        const index = partners.findIndex((partner) => partner.email === deletingEmail);
-        if (index >= 0) {
-            partners.splice(index, 1);
-            renderPartners();
-        }
-        deletePartnerModal.hide();
-    });
-
-    renderPartners();
 </script>
 {% endblock scripts %}

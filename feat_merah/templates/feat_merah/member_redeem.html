@@ -1,0 +1,154 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<section class="page-heading page-heading-row mb-4">
+    <div>
+        <h1>Redeem Hadiah</h1>
+        <p>Award Miles tersedia: <strong class="fs-5">{{ member_miles|default:0 }}</strong></p>
+    </div>
+</section>
+
+{% if success %}
+<div class="alert alert-success alert-dismissible fade show" role="alert">
+    {{ success }}
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+{% endif %}
+
+{% if error %}
+<div class="alert alert-danger alert-dismissible fade show" role="alert">
+    {{ error }}
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+{% endif %}
+
+<ul class="nav nav-pills mb-4" id="redeemTab" role="tablist">
+    <li class="nav-item" role="presentation">
+        <button class="nav-link active fw-semibold bg-light text-dark border" id="katalog-tab" data-bs-toggle="pill" data-bs-target="#katalog" type="button" role="tab" aria-controls="katalog" aria-selected="true">
+            Katalog Hadiah
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link fw-semibold text-muted" id="riwayat-tab" data-bs-toggle="pill" data-bs-target="#riwayat" type="button" role="tab" aria-controls="riwayat" aria-selected="false">
+            Riwayat Redeem
+        </button>
+    </li>
+</ul>
+
+<div class="tab-content" id="redeemTabContent">
+    
+    <div class="tab-pane fade show active" id="katalog" role="tabpanel" aria-labelledby="katalog-tab">
+        <div class="row g-4">
+            {% for hadiah in available_hadiah %}
+            <div class="col-md-6 col-lg-4">
+                <div class="card h-100 shadow-sm border-0 rounded-4">
+                    <div class="card-body">
+                        <span class="badge bg-dark mb-3 rounded-pill px-3 py-2 fw-normal">{{ hadiah.kode_hadiah }}</span>
+                        <h5 class="card-title fw-bold">{{ hadiah.nama }}</h5>
+                        <p class="card-text text-muted small mb-4">{{ hadiah.deskripsi }}</p>
+                        
+                        <div class="mb-4">
+                            <strong class="d-block fs-6">{{ hadiah.miles }} miles</strong>
+                            <small class="text-muted">Periode: {{ hadiah.valid_start_date|date:"Y-m-d" }} s/d {{ hadiah.program_end|date:"Y-m-d" }}</small>
+                        </div>
+                        
+                        <button class="btn btn-danger text-white fw-bold px-4 rounded-3" 
+                                data-bs-toggle="modal" 
+                                data-bs-target="#redeemConfirmModal"
+                                data-kode="{{ hadiah.kode_hadiah }}"
+                                data-nama="{{ hadiah.nama }}"
+                                data-miles="{{ hadiah.miles }}">
+                            REDEEM
+                        </button>
+                    </div>
+                </div>
+            </div>
+            {% empty %}
+            <div class="col-12">
+                <p class="text-muted text-center py-4">Tidak ada hadiah yang tersedia</p>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <div class="tab-pane fade" id="riwayat" role="tabpanel" aria-labelledby="riwayat-tab">
+        <section class="table-card table-responsive bg-white rounded-4 shadow-sm border-0 p-2">
+            <table class="table align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th class="py-3 px-4">Kode Hadiah</th>
+                        <th class="py-3 px-4">Hadiah</th>
+                        <th class="py-3 px-4">Waktu</th>
+                        <th class="py-3 px-4">Miles</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for redeem in redeem_history %}
+                    <tr>
+                        <td class="fw-bold py-3 px-4">{{ redeem.kode_hadiah }}</td>
+                        <td class="py-3 px-4">{{ redeem.nama }}</td>
+                        <td class="text-muted py-3 px-4">{{ redeem.timestamp|date:"Y-m-d H:i" }}</td>
+                        <td class="text-danger fw-semibold py-3 px-4">-{{ redeem.miles }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="4" class="text-center text-muted py-4">Belum ada riwayat redeem</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </section>
+    </div>
+</div>
+
+<div class="modal fade" id="redeemConfirmModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <form method="POST" action="{% url 'feat_merah:member_redeem' %}" class="modal-content rounded-4 border-0 shadow">
+            {% csrf_token %}
+            <input type="hidden" name="kode_hadiah" id="hiddenKodeHadiah">
+            
+            <div class="modal-header border-0 pb-0 px-4 pt-4">
+                <h2 class="modal-title fs-5 fw-bold">Redeem Miles</h2>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup"></button>
+            </div>
+            <div class="modal-body px-4 py-3">
+                <p class="mb-0 text-dark">
+                    Miles akan dipotong sebesar <strong id="confirmMiles">0</strong> untuk reward <strong id="confirmNama">-</strong> 
+                    dengan kode <strong id="confirmKode">-</strong>
+                </p>
+            </div>
+            <div class="modal-footer border-0 px-4 pb-4">
+                <button type="button" class="btn btn-outline-secondary rounded-3 px-4" data-bs-dismiss="modal">Batal</button>
+                <button type="submit" class="btn btn-primary rounded-3 px-4">Redeem</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock content %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const tabs = document.querySelectorAll('button[data-bs-toggle="pill"]');
+        tabs.forEach(tab => {
+            tab.addEventListener('shown.bs.tab', function (e) {
+                tabs.forEach(t => {
+                    t.classList.remove('bg-light', 'text-dark', 'border');
+                    t.classList.add('text-muted');
+                });
+                e.target.classList.remove('text-muted');
+                e.target.classList.add('bg-light', 'text-dark', 'border');
+            });
+        });
+
+        const redeemModal = document.getElementById('redeemConfirmModal');
+        redeemModal.addEventListener('show.bs.modal', function (event) {
+            const button = event.relatedTarget;
+            document.getElementById('hiddenKodeHadiah').value = button.getAttribute('data-kode');
+            document.getElementById('confirmKode').textContent = button.getAttribute('data-kode');
+            document.getElementById('confirmNama').textContent = button.getAttribute('data-nama');
+            document.getElementById('confirmMiles').textContent = button.getAttribute('data-miles');
+        });
+    });
+</script>
+{% endblock scripts %}
