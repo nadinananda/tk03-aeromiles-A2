@@ -1,59 +1,54 @@
 SET search_path TO aeromiles, public, extensions;
 
--- Tansfer Miles
-
-CREATE OR REPLACE PROCEDURE sp_transfer_miles (
-    p_email_pengirim VARCHAR,
-    p_email_penerima VARCHAR,
-    P_jumlah INT,
-    p_catatan VARCHAR
-)
-LANGUAGE plpgsql
-AS $$
+CREATE OR REPLACE FUNCTION trg_transfer_miles_func()
+RETURNS TRIGGER AS $$
 DECLARE
     v_pengirim_exist INTEGER;
     v_penerima_exist INTEGER;
     v_saldo_pengirim INT;
 BEGIN
-    IF LOWER(p_email_pengirim) = LOWER(p_email_penerima) THEN
-        RAISE EXCEPTION 'Kamu tidak bisa transfer miles ke dirimu sendiri';
+
+    IF LOWER(NEW.email_member_1) = LOWER(NEW.email_member_2) THEN
+        RAISE EXCEPTION 'U-umm... Kamu tidak bisa transfer miles ke dirimu sendiri, baka!';
     END IF;
 
-    SELECT COUNT(*) INTO v_pengirim_exist FROM MEMBER WHERE LOWER(email) = LOWER(p_email_pengirim);
+    SELECT COUNT(*) INTO v_pengirim_exist FROM MEMBER WHERE LOWER(email) = LOWER(NEW.email_member_1);
     IF v_pengirim_exist = 0 THEN
-        RAISE EXCEPTION 'Member pengirim dengan email % tidak ditemukan!', p_email_pengirim;
+        RAISE EXCEPTION 'Member pengirim dengan email % tidak ditemukan!', NEW.email_member_1;
     END IF;
 
-    SELECT COUNT(*) INTO v_penerima_exist FROM MEMBER WHERE LOWER(email) = LOWER(p_email_penerima);
+    SELECT COUNT(*) INTO v_penerima_exist FROM MEMBER WHERE LOWER(email) = LOWER(NEW.email_member_2);
     IF v_penerima_exist = 0 THEN
-        RAISE EXCEPTION 'Member penerima dengan email % tidak ditemukan!', p_email_penerima;
+        RAISE EXCEPTION 'Member penerima dengan email % tidak ditemukan!', NEW.email_member_2;
     END IF;
 
-    IF p_jumlah <= 0 THEN
+    IF NEW.jumlah <= 0 THEN
          RAISE EXCEPTION 'Jumlah transfer harus lebih besar dari 0!';
     END IF;
 
-    SELECT award_miles INTO v_saldo_pengirim FROM MEMBER WHERE LOWER(email) = LOWER(p_email_pengirim);
-    IF v_saldo_pengirim < p_jumlah THEN
-        RAISE EXCEPTION 'Saldo award_miles tidak mencukupi untuk melakukan transfer sebesar % miles. Saldo saat ini: %', p_jumlah, v_saldo_pengirim;
+    SELECT award_miles INTO v_saldo_pengirim FROM MEMBER WHERE LOWER(email) = LOWER(NEW.email_member_1);
+    IF v_saldo_pengirim < NEW.jumlah THEN
+        RAISE EXCEPTION 'Saldo award_miles tidak mencukupi untuk melakukan transfer sebesar % miles. Saldo saat ini: %', NEW.jumlah, v_saldo_pengirim;
     END IF;
 
     UPDATE MEMBER 
-    SET award_miles = award_miles - p_jumlah 
-    WHERE LOWER(email) = LOWER(p_email_pengirim);
+    SET award_miles = award_miles - NEW.jumlah 
+    WHERE LOWER(email) = LOWER(NEW.email_member_1);
 
     UPDATE MEMBER 
-    SET award_miles = award_miles + p_jumlah 
-    WHERE LOWER(email) = LOWER(p_email_penerima);
+    SET award_miles = award_miles + NEW.jumlah 
+    WHERE LOWER(email) = LOWER(NEW.email_member_2);
 
-    INSERT INTO TRANSFER (email_member_1, email_member_2, timestamp, jumlah, catatan)
-    VALUES (
-        (SELECT email FROM MEMBER WHERE LOWER(email) = LOWER(p_email_pengirim)), 
-        (SELECT email FROM MEMBER WHERE LOWER(email) = LOWER(p_email_penerima)), 
-        CURRENT_TIMESTAMP, 
-        p_jumlah, 
-        p_catatan
-    );
+    NEW.timestamp := CURRENT_TIMESTAMP;
 
+    RETURN NEW;
 END;
-$$;
+$$ LANGUAGE plpgsql;
+
+
+DROP TRIGGER IF EXISTS trigger_transfer_miles ON TRANSFER;
+
+CREATE TRIGGER trigger_transfer_miles
+BEFORE INSERT ON TRANSFER
+FOR EACH ROW
+EXECUTE FUNCTION trg_transfer_miles_func();
