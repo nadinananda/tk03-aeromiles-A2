@@ -1,37 +1,70 @@
 {% extends 'base.html' %}
 {% block content %}
 <div class="row">
-    <div class="col-md-8 mx-auto">
-        <h2 class="mb-4">Informasi Tier & Keuntungan</h2>
+    <div class="col-md-10 mx-auto">
+        <h2 class="mb-4 fw-bold">Info Tier & Benefit</h2>
 
-        <div class="card shadow-sm mb-4 border-warning">
-            <div class="card-body text-center">
-                <h5 class="text-muted">Status Tier Anda Saat Ini</h5>
-                <h1 class="text-warning display-4 fw-bold">{{ tier_sekarang }}</h1>
-                <p class="mt-3">Total Miles: <strong>{{ miles_sekarang }}</strong></p>
-                
-                <div class="mt-4 text-start">
-                    <p class="mb-1 small">Progress menuju {{ next_tier }} (Butuh {{ syarat_next_tier }} miles)</p>
-                    <div class="progress" style="height: 25px;">
-                        <div class="progress-bar bg-warning" role="progressbar" style="width: 90%;" aria-valuenow="90" aria-valuemin="0" aria-valuemax="100">90%</div>
-                    </div>
+        <div class="card shadow-sm mb-5" style="border: 1px solid #cbd5e1; border-radius: 12px; background-color: #ffffff;">
+            <div class="card-body p-4">
+                <h6 class="fw-bold mb-3 text-dark">Status Menuju {{ next_tier }}</h6>
+                <div class="d-flex justify-content-between align-items-end mb-2">
+                    <small class="text-muted fw-semibold">Miles Terkumpul</small>
+                    <small class="fw-bold text-dark">{{ miles_sekarang }} / {{ max_progress_miles }}</small>
                 </div>
+                <div class="progress" style="height: 10px; border-radius: 5px;">
+                    <div class="progress-bar" role="progressbar" style="width: {{ persentase }}%; background-color: #1e3a8a;" aria-valuenow="{{ persentase }}" aria-valuemin="0" aria-valuemax="100"></div>
+                </div>
+                {% if syarat_next_tier != "0" %}
+                <p class="mt-2 mb-0 small text-muted">Dapatkan <strong>{{ syarat_next_tier }} miles</strong> lagi untuk naik level!</p>
+                {% endif %}
             </div>
         </div>
 
-        <div class="card shadow-sm">
-            <div class="card-header bg-light">
-                <h5 class="mb-0">Keuntungan Tier {{ tier_sekarang }}</h5>
+        <div class="d-flex flex-column gap-4">
+            {% for t in semua_tier %}
+            <div class="card shadow-sm {% if t.nama == tier_sekarang %}border-warning{% endif %}" 
+                 style="{% if t.nama == tier_sekarang %}border-width: 2.5px; background-color: #fffdf5;{% else %}border: 1px solid #e2e8f0;{% endif %} border-radius: 15px;">
+                
+                <div class="card-body p-4">
+                    <div class="d-flex align-items-start gap-3 mb-3">
+                        <div class="rounded-circle d-flex align-items-center justify-content-center text-white 
+                            {% if t.nama == 'Blue' %}bg-primary
+                            {% elif t.nama == 'Silver' %}bg-secondary
+                            {% elif t.nama == 'Gold' %}bg-warning
+                            {% elif t.nama == 'Platinum' %}bg-dark
+                            {% endif %}" 
+                            style="width: 55px; height: 55px; flex-shrink: 0; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);">
+                            <span class="fs-4">★</span>
+                        </div>
+                        
+                        <div class="w-100">
+                            <div class="d-flex align-items-center gap-2">
+                                <h4 class="fw-bold mb-0">{{ t.nama }}</h4>
+                                {% if t.nama == tier_sekarang %}
+                                <span class="badge bg-primary rounded-pill px-3 py-1" style="font-size: 0.75rem;">TIER ANDA</span>
+                                {% endif %}
+                            </div>
+                            <p class="text-muted small mb-0">Syarat: Min. {{ t.min_terbang }} terbang & {{ t.min_miles }} miles</p>
+                        </div>
+                    </div>
+
+                    <div class="ps-1">
+                        <h6 class="fw-bold small text-uppercase text-muted mb-2">Keuntungan Eksklusif:</h6>
+                        <ul class="list-unstyled row g-2">
+                            {% for untung in t.keuntungan %}
+                            <li class="col-md-6 small d-flex align-items-center gap-2">
+                                <span class="text-success fw-bold">✓</span> {{ untung }}
+                            </li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                </div>
             </div>
-            <ul class="list-group list-group-flush">
-                {% for untung in keuntungan_list %}
-                <li class="list-group-item">
-                    <span class="text-success me-2">&#10003;</span> {{ untung }}
-                </li>
-                {% empty %}
-                <li class="list-group-item text-muted">Belum ada data keuntungan untuk tier ini.</li>
-                {% endfor %}
-            </ul>
+            {% endfor %}
+        </div>
+
+        <div class="mt-5 mb-4 text-center">
+            <p class="text-muted small">Syarat dan ketentuan berlaku untuk setiap tingkatan tier AeroMiles.</p>
         </div>
     </div>
 </div>

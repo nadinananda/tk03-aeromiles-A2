@@ -54,47 +54,74 @@ def info_tier_view(request):
 
     email_user = request.session.get('email')
 
+    benefits_map = {
+        'Blue': ['E-boarding pass', 'Dapatkan miles di setiap penerbangan'],
+        'Silver': ['Semua benefit Blue', 'Prioritas Check-in di counter khusus', 'Ekstra kuota bagasi 5kg'],
+        'Gold': ['Semua benefit Silver', 'Akses Executive Lounge Gratis', 'Ekstra kuota bagasi 15kg', 'Prioritas boarding'],
+        'Platinum': ['Semua benefit Gold', 'Ekstra kuota bagasi 20kg', 'Pemilihan kursi gratis', 'Layanan First Class check-in']
+    }
+
     with connection.cursor() as cursor:
-        # Ambil data tier sekarang
         cursor.execute("""
-            SELECT t.nama, m.total_miles 
-            FROM aeromiles.MEMBER m
-            JOIN aeromiles.TIER t ON m.id_tier = t.id_tier
-            WHERE m.email = %s
+            SELECT total_miles 
+            FROM aeromiles.MEMBER
+            WHERE email = %s
         """, [email_user])
         member_data = cursor.fetchone()
-        
-        tier_sekarang = member_data[0] if member_data else 'Blue'
-        miles_sekarang = member_data[1] if member_data else 0
+        miles_sekarang = member_data[0] if member_data else 0
 
-        # Cari tau next tier
         cursor.execute("""
-            SELECT nama, minimal_tier_miles 
+            SELECT nama 
             FROM aeromiles.TIER
-            WHERE minimal_tier_miles > %s
-            ORDER BY minimal_tier_miles ASC
+            WHERE minimal_tier_miles <= %s
+            ORDER BY minimal_tier_miles DESC
             LIMIT 1
         """, [miles_sekarang])
-        next_tier_data = cursor.fetchone()
+        tier_data = cursor.fetchone()
+        tier_sekarang = tier_data[0] if tier_data else 'Blue'
 
-    if next_tier_data:
-        next_tier = next_tier_data[0]
-        syarat_next_tier = next_tier_data[1] - miles_sekarang
-    else:
+        cursor.execute("""
+            SELECT id_tier, nama, minimal_frekuensi_terbang, minimal_tier_miles
+            FROM aeromiles.TIER
+            ORDER BY minimal_tier_miles ASC
+        """)
+        semua_tier_rows = cursor.fetchall()
+
+        semua_tier = []
+        batas_next_tier = None
         next_tier = "Maksimal (Platinum)"
+
+        for row in semua_tier_rows:
+            nama_tier = row[1]
+            semua_tier.append({
+                'id': row[0],
+                'nama': nama_tier,
+                'min_terbang': row[2],
+                'min_miles': f"{row[3]:,}",
+                'keuntungan': benefits_map.get(nama_tier, ['Keuntungan segera hadir!'])
+            })
+            
+            if row[3] > miles_sekarang and batas_next_tier is None:
+                next_tier = nama_tier
+                batas_next_tier = row[3]
+
+    if batas_next_tier:
+        syarat_next_tier = batas_next_tier - miles_sekarang
+        persentase = int((miles_sekarang / batas_next_tier) * 100)
+        max_progress_miles = batas_next_tier
+    else:
         syarat_next_tier = 0
+        persentase = 100
+        max_progress_miles = miles_sekarang
 
     context = {
         'tier_sekarang': tier_sekarang,
-        'miles_sekarang': miles_sekarang,
-        'syarat_next_tier': syarat_next_tier,
+        'miles_sekarang': f"{miles_sekarang:,}",
+        'syarat_next_tier': f"{syarat_next_tier:,}",
         'next_tier': next_tier,
-        'keuntungan_list': [
-            'Prioritas Check-in di counter khusus',
-            'Akses Executive Lounge Gratis',
-            'Ekstra kuota bagasi 15kg',
-            'Prioritas boarding'
-        ]
+        'persentase': persentase,
+        'max_progress_miles': f"{max_progress_miles:,}",
+        'semua_tier': semua_tier
     }
     return render(request, 'info_tier.html', context)
 

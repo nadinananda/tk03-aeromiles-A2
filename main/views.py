@@ -68,26 +68,39 @@ def dashboard_view(request):
 
     with connection.cursor() as cursor:
         if role_user == 'Member':
+            # 1. Ambil data member tanpa JOIN ke tabel TIER dulu
             cursor.execute("""
                 SELECT p.first_mid_name, p.last_name, p.mobile_number, p.kewarganegaraan, p.tanggal_lahir,
-                       m.tanggal_bergabung, m.nomor_member, t.nama, m.total_miles, m.award_miles
+                       m.tanggal_bergabung, m.nomor_member, m.total_miles, m.award_miles
                 FROM PENGGUNA p
                 JOIN MEMBER m ON p.email = m.email
-                JOIN TIER t ON m.id_tier = t.id_tier
                 WHERE p.email = %s
             """, [email_user])
             row = cursor.fetchone()
             
             if row:
+                total_miles_val = row[7]
+                
+                # 2. Hitung TIER secara dinamis berdasarkan total_miles
+                cursor.execute("""
+                    SELECT nama 
+                    FROM TIER
+                    WHERE minimal_tier_miles <= %s
+                    ORDER BY minimal_tier_miles DESC
+                    LIMIT 1
+                """, [total_miles_val])
+                tier_data = cursor.fetchone()
+                tier_sekarang = tier_data[0] if tier_data else 'Blue'
+
                 context['nama'] = f"{row[0]} {row[1]}"
                 context['telepon'] = row[2]
                 context['kewarganegaraan'] = row[3]
                 context['tanggal_lahir'] = str(row[4])
                 context['tanggal_bergabung'] = str(row[5])
                 context['nomor_member'] = row[6]
-                context['tier'] = row[7]
-                context['total_miles'] = f"{row[8]:,}"
-                context['award_miles'] = f"{row[9]:,}"
+                context['tier'] = tier_sekarang # Nah, ini sekarang ngirim tier yang akurat!
+                context['total_miles'] = f"{total_miles_val:,}"
+                context['award_miles'] = f"{row[8]:,}"
 
             transaksi_list = []
             
@@ -117,10 +130,8 @@ def dashboard_view(request):
             for t in cursor.fetchall():
                 transaksi_list.append({'tipe': f'Redeem {t[2]}', 'waktu': t[0], 'jumlah': f"-{t[1]}"})
 
-            # Urutkan berdasarkan waktu paling baru, lalu ambil 5 teratas
             transaksi_list.sort(key=lambda x: x['waktu'], reverse=True)
             
-            # Format waktu jadi string agar rapi di HTML
             for trx in transaksi_list:
                 trx['waktu'] = trx['waktu'].strftime("%Y-%m-%d %H:%M")
                 
