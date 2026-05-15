@@ -25,7 +25,7 @@
         <li class="nav-item"><a class="nav-link {% if active_page == 'kelola_klaim' %}active{% endif %}" href="{% url 'feat_hijau:kelola_klaim' %}"><i class="bi bi-clipboard2-check"></i> Kelola Klaim</a></li>
         <li class="nav-item"><a class="nav-link {% if active_page == 'kelola_hadiah' %}active{% endif %}" href="{% url 'feat_merah:manage_rewards' %}"><i class="bi bi-gift"></i> Kelola Hadiah & Penyedia</a></li>
         <li class="nav-item"><a class="nav-link {% if active_page == 'kelola_mitra' %}active{% endif %}" href="{% url 'feat_merah:manage_partners' %}"><i class="bi bi-building"></i> Kelola Mitra</a></li>
-        <li class="nav-item"><a class="nav-link {% if active_page == 'laporan' %}active{% endif %}" href="{% url 'feat_merah:laporan_transaksi' %}"><i class="bi bi-bar-chart"></i> Laporan Transaksi</a></li>
+        <li class="nav-item"><a class="nav-link {% if active_page == 'laporan' %}active{% endif %}" href="{% url 'feat_biru:laporan_transaksi' %}"><i class="bi bi-bar-chart"></i> Laporan Transaksi</a></li>
         <li class="nav-item"><a class="nav-link {% if active_page == 'pengaturan_profil' %}active{% endif %}" href="{% url 'feat_hijau:pengaturan_profil' %}"><i class="bi bi-gear"></i> Pengaturan Profil</a></li>
       </ul>
       {% endif %}
