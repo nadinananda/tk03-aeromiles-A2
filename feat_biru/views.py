@@ -128,6 +128,7 @@ def laporan_transaksi_view(request):
     if not check_role(request, 'Staf'):
         return redirect('main:dashboard')
 
+    # Handle POST (Proses Hapus Riwayat Transaksi)
     if request.method == 'POST':
         tabel_asal = request.POST.get('tabel_asal')
         pk1 = request.POST.get('pk1')
@@ -148,6 +149,7 @@ def laporan_transaksi_view(request):
         return redirect('feat_biru:laporan_transaksi')
 
     with connection.cursor() as cursor:
+        # 1. Ambil Summary (Cards)
         cursor.execute("SELECT SUM(total_miles) FROM aeromiles.MEMBER")
         total_miles_beredar = cursor.fetchone()[0] or 0
 
@@ -161,59 +163,80 @@ def laporan_transaksi_view(request):
         cursor.execute("SELECT COUNT(*) FROM aeromiles.CLAIM_MISSING_MILES WHERE status_penerimaan = 'Disetujui'")
         total_klaim_disetujui = cursor.fetchone()[0] or 0
 
+        # 2. Ambil Riwayat Transaksi (UNION ALL)
         cursor.execute("""
             SELECT 'TRANSFER' as tabel_asal, email_member_1 as pk1, email_member_2 as pk2, timestamp::text as pk3,
                    'Transfer' as tipe, email_member_1 || ' -> ' || email_member_2 as member, 
                    -jumlah as miles, timestamp as waktu
             FROM aeromiles.TRANSFER
-            
             UNION ALL
-            
             SELECT 'REDEEM' as tabel_asal, r.email_member as pk1, r.kode_hadiah as pk2, r.timestamp::text as pk3,
                    'Redeem' as tipe, r.email_member as member, 
                    -h.miles as miles, r.timestamp as waktu
             FROM aeromiles.REDEEM r
             JOIN aeromiles.HADIAH h ON r.kode_hadiah = h.kode_hadiah
-            
             UNION ALL
-            
             SELECT 'PACKAGE' as tabel_asal, m.email_member as pk1, m.id_award_miles_package as pk2, m.timestamp::text as pk3,
                    'Package' as tipe, m.email_member as member, 
                    a.jumlah_award_miles as miles, m.timestamp as waktu
             FROM aeromiles.MEMBER_AWARD_MILES_PACKAGE m
             JOIN aeromiles.AWARD_MILES_PACKAGE a ON m.id_award_miles_package = a.id
-            
             UNION ALL
-            
             SELECT 'KLAIM' as tabel_asal, email_member as pk1, id::text as pk2, timestamp::text as pk3,
                    'Klaim' as tipe, email_member as member, 
                    2500 as miles, timestamp as waktu
             FROM aeromiles.CLAIM_MISSING_MILES
             WHERE status_penerimaan = 'Disetujui'
-            
             ORDER BY waktu DESC
         """)
         rows = cursor.fetchall()
 
-    transaksi_list = []
-    for r in rows:
-        transaksi_list.append({
-            'tabel_asal': r[0],
-            'pk1': r[1],
-            'pk2': r[2],
-            'pk3': r[3],
-            'tipe': r[4],
-            'member': r[5],
-            'miles': f"{r[6]:,}",
-            'waktu': r[7].strftime("%Y-%m-%d %H:%M") if hasattr(r[7], 'strftime') else str(r[7]),
-            'bisa_dihapus': r[0] != 'KLAIM' 
-        })
+        transaksi_list = []
+        for r in rows:
+            transaksi_list.append({
+                'tabel_asal': r[0],
+                'pk1': r[1],
+                'pk2': r[2],
+                'pk3': r[3],
+                'tipe': r[4],
+                'member': r[5],
+                'miles': f"{r[6]:,}",
+                'waktu': r[7].strftime("%Y-%m-%d %H:%M") if hasattr(r[7], 'strftime') else str(r[7]),
+                'bisa_dihapus': r[0] != 'KLAIM' 
+            })
+
+        # 3. LEADERBOARD (Top 5 Member logic terintegrasi dari fitur merah)
+        cursor.execute("""
+            SELECT 
+                ROW_NUMBER() OVER (ORDER BY m.total_miles DESC) AS rank,
+                TRIM(p.first_mid_name || ' ' || COALESCE(p.last_name, '')) AS nama_lengkap,
+                m.email,
+                m.total_miles,
+                (SELECT COUNT(*) FROM aeromiles.TRANSFER t WHERE t.email_member_1 = m.email) +
+                (SELECT COUNT(*) FROM aeromiles.REDEEM r WHERE r.email_member = m.email) AS jumlah_transaksi
+            FROM aeromiles.MEMBER m
+            JOIN aeromiles.PENGGUNA p ON m.email = p.email
+            ORDER BY m.total_miles DESC
+            LIMIT 5
+        """)
+        top_rows = cursor.fetchall()
+        
+        top_5_members = []
+        for r in top_rows:
+            top_5_members.append({
+                'rank': r[0],
+                'nama': r[1],
+                'email': r[2],
+                'total_miles': f"{r[3]:,}",
+                'jumlah_transaksi': r[4]
+            })
 
     context = {
         'total_miles_beredar': f"{total_miles_beredar:,}",
         'total_redeem_bulan_ini': f"{total_redeem_bulan_ini:,}",
         'total_klaim_disetujui': f"{total_klaim_disetujui:,}",
-        'transaksi_list': transaksi_list
+        'transaksi_list': transaksi_list,
+        'top_5_members': top_5_members  # <-- Dikirim ke HTML!
     }
 
     return render(request, 'laporan_transaksi.html', context)
