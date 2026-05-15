@@ -15,7 +15,6 @@ def beli_package_view(request):
 
     email_user = request.session.get('email')
 
-    # Handle POST (Proses Beli Package)
     if request.method == 'POST':
         id_package = request.POST.get('id_package')
         try:
@@ -29,7 +28,6 @@ def beli_package_view(request):
             messages.error(request, f'Gagal beli package: {str(e)}')
         return redirect('feat_biru:beli_package')
 
-    # Handle GET (Tampilin Daftar Package)
     with connection.cursor() as cursor:
         cursor.execute("""
             SELECT id, jumlah_award_miles, harga_paket 
@@ -130,20 +128,69 @@ def laporan_transaksi_view(request):
     if not check_role(request, 'Staf'):
         return redirect('main:dashboard')
 
+    if request.method == 'POST':
+        tabel_asal = request.POST.get('tabel_asal')
+        pk1 = request.POST.get('pk1')
+        pk2 = request.POST.get('pk2')
+        pk3 = request.POST.get('pk3')
+        
+        try:
+            with connection.cursor() as cursor:
+                if tabel_asal == 'TRANSFER':
+                    cursor.execute("DELETE FROM aeromiles.TRANSFER WHERE email_member_1=%s AND email_member_2=%s AND timestamp=%s", [pk1, pk2, pk3])
+                elif tabel_asal == 'REDEEM':
+                    cursor.execute("DELETE FROM aeromiles.REDEEM WHERE email_member=%s AND kode_hadiah=%s AND timestamp=%s", [pk1, pk2, pk3])
+                elif tabel_asal == 'PACKAGE':
+                    cursor.execute("DELETE FROM aeromiles.MEMBER_AWARD_MILES_PACKAGE WHERE email_member=%s AND id_award_miles_package=%s AND timestamp=%s", [pk1, pk2, pk3])
+            messages.success(request, 'Berhasil! Riwayat transaksi telah dihapus permanen.')
+        except Exception as e:
+            messages.error(request, f'Gagal menghapus riwayat: {str(e)}')
+        return redirect('feat_biru:laporan_transaksi')
+
     with connection.cursor() as cursor:
-        # Pake UNION ALL buat gabungin 3 jenis transaksi jadi satu tabel
+        cursor.execute("SELECT SUM(total_miles) FROM aeromiles.MEMBER")
+        total_miles_beredar = cursor.fetchone()[0] or 0
+
         cursor.execute("""
-            SELECT 'TRX-R' || ROW_NUMBER() OVER(ORDER BY timestamp DESC) AS id_trx, 
-                   'Redeem Hadiah' AS jenis, email_member AS pelaku, timestamp AS waktu, kode_hadiah AS detail
-            FROM aeromiles.REDEEM
-            UNION ALL
-            SELECT 'TRX-P' || ROW_NUMBER() OVER(ORDER BY timestamp DESC), 
-                   'Beli Package', email_member, timestamp, id_award_miles_package
-            FROM aeromiles.MEMBER_AWARD_MILES_PACKAGE
-            UNION ALL
-            SELECT 'TRX-T' || ROW_NUMBER() OVER(ORDER BY timestamp DESC), 
-                   'Transfer', email_member_1 || ' -> ' || email_member_2, timestamp, 'Transfer ' || jumlah || ' Miles'
+            SELECT COUNT(*) FROM aeromiles.REDEEM 
+            WHERE EXTRACT(MONTH FROM timestamp) = EXTRACT(MONTH FROM CURRENT_DATE)
+            AND EXTRACT(YEAR FROM timestamp) = EXTRACT(YEAR FROM CURRENT_DATE)
+        """)
+        total_redeem_bulan_ini = cursor.fetchone()[0] or 0
+
+        cursor.execute("SELECT COUNT(*) FROM aeromiles.CLAIM_MISSING_MILES WHERE status_penerimaan = 'Disetujui'")
+        total_klaim_disetujui = cursor.fetchone()[0] or 0
+
+        cursor.execute("""
+            SELECT 'TRANSFER' as tabel_asal, email_member_1 as pk1, email_member_2 as pk2, timestamp::text as pk3,
+                   'Transfer' as tipe, email_member_1 || ' -> ' || email_member_2 as member, 
+                   -jumlah as miles, timestamp as waktu
             FROM aeromiles.TRANSFER
+            
+            UNION ALL
+            
+            SELECT 'REDEEM' as tabel_asal, r.email_member as pk1, r.kode_hadiah as pk2, r.timestamp::text as pk3,
+                   'Redeem' as tipe, r.email_member as member, 
+                   -h.miles as miles, r.timestamp as waktu
+            FROM aeromiles.REDEEM r
+            JOIN aeromiles.HADIAH h ON r.kode_hadiah = h.kode_hadiah
+            
+            UNION ALL
+            
+            SELECT 'PACKAGE' as tabel_asal, m.email_member as pk1, m.id_award_miles_package as pk2, m.timestamp::text as pk3,
+                   'Package' as tipe, m.email_member as member, 
+                   a.jumlah_award_miles as miles, m.timestamp as waktu
+            FROM aeromiles.MEMBER_AWARD_MILES_PACKAGE m
+            JOIN aeromiles.AWARD_MILES_PACKAGE a ON m.id_award_miles_package = a.id
+            
+            UNION ALL
+            
+            SELECT 'KLAIM' as tabel_asal, email_member as pk1, id::text as pk2, timestamp::text as pk3,
+                   'Klaim' as tipe, email_member as member, 
+                   2500 as miles, timestamp as waktu
+            FROM aeromiles.CLAIM_MISSING_MILES
+            WHERE status_penerimaan = 'Disetujui'
+            
             ORDER BY waktu DESC
         """)
         rows = cursor.fetchall()
@@ -151,11 +198,22 @@ def laporan_transaksi_view(request):
     transaksi_list = []
     for r in rows:
         transaksi_list.append({
-            'id_trx': r[0],
-            'jenis': r[1],
-            'pelaku': r[2],
-            'waktu': r[3].strftime("%Y-%m-%d %H:%M") if hasattr(r[3], 'strftime') else str(r[3]),
-            'detail': r[4]
+            'tabel_asal': r[0],
+            'pk1': r[1],
+            'pk2': r[2],
+            'pk3': r[3],
+            'tipe': r[4],
+            'member': r[5],
+            'miles': f"{r[6]:,}",
+            'waktu': r[7].strftime("%Y-%m-%d %H:%M") if hasattr(r[7], 'strftime') else str(r[7]),
+            'bisa_dihapus': r[0] != 'KLAIM' 
         })
 
-    return render(request, 'laporan_transaksi.html', {'transaksi_list': transaksi_list})
+    context = {
+        'total_miles_beredar': f"{total_miles_beredar:,}",
+        'total_redeem_bulan_ini': f"{total_redeem_bulan_ini:,}",
+        'total_klaim_disetujui': f"{total_klaim_disetujui:,}",
+        'transaksi_list': transaksi_list
+    }
+
+    return render(request, 'laporan_transaksi.html', context)
