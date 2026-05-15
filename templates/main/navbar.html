@@ -29,14 +29,26 @@
         <li class="nav-item"><a class="nav-link {% if active_page == 'pengaturan_profil' %}active{% endif %}" href="{% url 'feat_hijau:pengaturan_profil' %}"><i class="bi bi-gear"></i> Pengaturan Profil</a></li>
       </ul>
       {% endif %}
+      
       <ul class="navbar-nav ms-auto">
+        {% if request.session.email %}
         <li class="nav-item">
           <a class="nav-link btn-logout ms-2" href="{% url 'main:logout' %}"><i class="bi bi-box-arrow-right"></i> Logout</a>
         </li>
+        {% else %}
+        <li class="nav-item">
+          <a class="nav-link" href="{% url 'main:login' %}"><i class="bi bi-box-arrow-in-right"></i> Login</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="{% url 'main:register' %}"><i class="bi bi-person-plus"></i> Register</a>
+        </li>
+        {% endif %}
       </ul>
+
     </div>
   </div>
 </nav>
+
 {% if request.session.email %}
 <div class="navbar-sub">
   Masuk sebagai <strong>{{ request.session.nama_lengkap }}</strong> &mdash; {{ request.session.role|title }}

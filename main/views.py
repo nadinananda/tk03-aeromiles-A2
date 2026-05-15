@@ -54,74 +54,112 @@ def logout_view(request):
 
 def dashboard_view(request):
     if 'email' not in request.session:
+        messages.error(request, "U-umm... Kamu harus login dulu, baka!")
         return redirect('main:login')
-    
-    email_user = request.session.get('email')
-    role_user = request.session.get('role')
+
+    email_user = request.session['email']
+    role_user = request.session['role']
+
+    context = {
+        'role': role_user,
+        'email': email_user,
+        'active_page': 'dashboard' 
+    }
 
     with connection.cursor() as cursor:
-        cursor.execute("""
-            SELECT salutation, first_mid_name, last_name, mobile_number, kewarganegaraan, tanggal_lahir 
-            FROM PENGGUNA WHERE email = %s
-        """, [email_user])
-        user_data = cursor.fetchone()
-        
-        nama = f"{user_data[0]} {user_data[1]} {user_data[2]}" if user_data else 'N/A'
-        
-        context = {
-            'nama': nama,
-            'email': email_user,
-            'telepon': user_data[3] if user_data else 'N/A',
-            'kewarganegaraan': user_data[4] if user_data else 'N/A',
-            'tanggal_lahir': user_data[5] if user_data else 'N/A',
-            'role': role_user,
-        }
-
         if role_user == 'Member':
             cursor.execute("""
-                SELECT m.nomor_member, t.nama, m.total_miles, m.award_miles, m.tanggal_bergabung
-                FROM MEMBER m
+                SELECT p.first_mid_name, p.last_name, p.mobile_number, p.kewarganegaraan, p.tanggal_lahir,
+                       m.tanggal_bergabung, m.nomor_member, t.nama, m.total_miles, m.award_miles
+                FROM PENGGUNA p
+                JOIN MEMBER m ON p.email = m.email
                 JOIN TIER t ON m.id_tier = t.id_tier
-                WHERE m.email = %s
+                WHERE p.email = %s
             """, [email_user])
-            member_data = cursor.fetchone()
+            row = cursor.fetchone()
             
-            if member_data:
-                context.update({
-                    'nomor_member': member_data[0],
-                    'tier': member_data[1],
-                    'total_miles': member_data[2],
-                    'award_miles': member_data[3],
-                    'tanggal_bergabung': member_data[4],
-                })
+            if row:
+                context['nama'] = f"{row[0]} {row[1]}"
+                context['telepon'] = row[2]
+                context['kewarganegaraan'] = row[3]
+                context['tanggal_lahir'] = str(row[4])
+                context['tanggal_bergabung'] = str(row[5])
+                context['nomor_member'] = row[6]
+                context['tier'] = row[7]
+                context['total_miles'] = f"{row[8]:,}"
+                context['award_miles'] = f"{row[9]:,}"
+
+            transaksi_list = []
+            
+            cursor.execute("SELECT timestamp, jumlah FROM TRANSFER WHERE email_member_1 = %s", [email_user])
+            for t in cursor.fetchall():
+                transaksi_list.append({'tipe': 'Transfer Keluar', 'waktu': t[0], 'jumlah': f"-{t[1]}"})
+            
+            cursor.execute("SELECT timestamp, jumlah FROM TRANSFER WHERE email_member_2 = %s", [email_user])
+            for t in cursor.fetchall():
+                transaksi_list.append({'tipe': 'Transfer Masuk', 'waktu': t[0], 'jumlah': f"+{t[1]}"})
                 
-                try:
-                    cursor.execute("""
-                        SELECT h.nama, r.timestamp 
-                        FROM REDEEM r
-                        JOIN HADIAH h ON r.kode_hadiah = h.kode_hadiah
-                        WHERE r.email_member = %s
-                        ORDER BY r.timestamp DESC LIMIT 5
-                    """, [email_user])
-                    transaksi = cursor.fetchall()
-                    context['transaksi'] = [
-                        {'nama': t[0], 'waktu': t[1]}
-                        for t in transaksi
-                    ]
-                except Exception as e:
-                    context['transaksi'] = []
+            cursor.execute("""
+                SELECT m.timestamp, a.jumlah_award_miles 
+                FROM MEMBER_AWARD_MILES_PACKAGE m 
+                JOIN AWARD_MILES_PACKAGE a ON m.id_award_miles_package = a.id 
+                WHERE m.email_member = %s
+            """, [email_user])
+            for t in cursor.fetchall():
+                transaksi_list.append({'tipe': 'Beli Paket Miles', 'waktu': t[0], 'jumlah': f"+{t[1]}"})
+
+            cursor.execute("""
+                SELECT r.timestamp, h.miles, h.nama 
+                FROM REDEEM r 
+                JOIN HADIAH h ON r.kode_hadiah = h.kode_hadiah 
+                WHERE r.email_member = %s
+            """, [email_user])
+            for t in cursor.fetchall():
+                transaksi_list.append({'tipe': f'Redeem {t[2]}', 'waktu': t[0], 'jumlah': f"-{t[1]}"})
+
+            # Urutkan berdasarkan waktu paling baru, lalu ambil 5 teratas
+            transaksi_list.sort(key=lambda x: x['waktu'], reverse=True)
+            
+            # Format waktu jadi string agar rapi di HTML
+            for trx in transaksi_list:
+                trx['waktu'] = trx['waktu'].strftime("%Y-%m-%d %H:%M")
+                
+            context['transaksi'] = transaksi_list[:5]
 
         elif role_user == 'Staf':
             cursor.execute("""
-                SELECT id_staf
-                FROM STAF WHERE email = %s
+                SELECT p.first_mid_name, p.last_name, p.mobile_number, p.kewarganegaraan, p.tanggal_lahir,
+                       s.id_staf, mk.nama_maskapai, mk.kode_maskapai
+                FROM PENGGUNA p
+                JOIN STAF s ON p.email = s.email
+                JOIN MASKAPAI mk ON s.kode_maskapai = mk.kode_maskapai
+                WHERE p.email = %s
             """, [email_user])
-            staf_data = cursor.fetchone()
+            row = cursor.fetchone()
             
-            if staf_data:
-                context.update({
-                    'id_staf': staf_data[0],
-                })
+            if row:
+                context['nama'] = f"{row[0]} {row[1]}"
+                context['telepon'] = row[2]
+                context['kewarganegaraan'] = row[3]
+                context['tanggal_lahir'] = str(row[4])
+                context['id_staf'] = row[5]
+                context['maskapai'] = row[6]
+                kode_maskapai = row[7]
+
+                cursor.execute("""
+                    SELECT status_penerimaan, COUNT(*) 
+                    FROM CLAIM_MISSING_MILES 
+                    WHERE maskapai = %s 
+                    GROUP BY status_penerimaan
+                """, [kode_maskapai])
+                
+                klaim_counts = {'Menunggu': 0, 'Disetujui': 0, 'Ditolak': 0}
+                for status, count in cursor.fetchall():
+                    klaim_counts[status] = count
+                
+                context['klaim_menunggu'] = klaim_counts['Menunggu']
+                context['klaim_disetujui'] = klaim_counts['Disetujui']
+                context['klaim_ditolak'] = klaim_counts['Ditolak']
 
     return render(request, 'main/dashboard.html', context)
 

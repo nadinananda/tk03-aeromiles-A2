@@ -40,7 +40,6 @@
     </div>
 
     {% if role == 'Member' %}
-    <!-- Card Navigasi Fitur -->
     <div class="row mb-4">
         <div class="col-md-6 mb-3">
             <a href="{% url 'feat_merah:member_redeem' %}" class="card shadow-sm text-decoration-none text-dark h-100">
@@ -89,7 +88,14 @@
             <div class="card shadow-sm">
                 <div class="card-body">
                     <small class="text-muted">Tier</small>
-                    <h4 class="mb-0 text-warning">{{ tier }}</h4>
+                    <h4 class="mb-0 
+                        {% if tier == 'Blue' %}text-primary
+                        {% elif tier == 'Silver' %}text-secondary
+                        {% elif tier == 'Gold' %}text-warning
+                        {% elif tier == 'Platinum' %}text-dark
+                        {% endif %}">
+                        {{ tier }}
+                    </h4>
                 </div>
             </div>
         </div>
@@ -131,6 +137,10 @@
                             {{ t.jumlah }} miles
                         </td>
                     </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="3" class="text-center text-muted">Belum ada transaksi</td>
+                    </tr>
                     {% endfor %}
                 </tbody>
             </table>
@@ -138,7 +148,6 @@
     </div>
 
     {% elif role == 'Staf' %}
-    <!-- Card Navigasi Fitur Staf -->
     <div class="row mb-4">
         <div class="col-md-6 mb-3">
             <a href="{% url 'kuning:kelola_member' %}" class="card shadow-sm text-decoration-none text-dark h-100">
