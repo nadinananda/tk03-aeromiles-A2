@@ -1,202 +1,74 @@
 SET search_path TO aeromiles, public, extensions;
 
-CREATE OR REPLACE FUNCTION fn_hitung_missing_miles(
-    p_bandara_asal CHAR(3),
-    p_bandara_tujuan CHAR(3),
-    p_kelas_kabin VARCHAR
-)
-RETURNS INT
-LANGUAGE plpgsql
-AS $$
-DECLARE
-    v_negara_asal VARCHAR(100);
-    v_negara_tujuan VARCHAR(100);
-    v_base_miles INT;
-    v_multiplier NUMERIC;
+CREATE OR REPLACE FUNCTION check_duplicate_claim_missing_miles()
+RETURNS TRIGGER AS $$
 BEGIN
-    IF p_bandara_asal = p_bandara_tujuan THEN
-        RAISE EXCEPTION 'Bandara asal dan tujuan tidak boleh sama.';
+    IF EXISTS (
+        SELECT 1
+        FROM claim_missing_miles
+        WHERE LOWER(email_member) = LOWER(NEW.email_member)
+          AND UPPER(flight_number) = UPPER(NEW.flight_number)
+          AND tanggal_penerbangan = NEW.tanggal_penerbangan
+          AND UPPER(nomor_tiket) = UPPER(NEW.nomor_tiket)
+          AND id <> COALESCE(NEW.id, -1)
+    ) THEN
+        RAISE EXCEPTION
+        'ERROR: Klaim untuk penerbangan "%" pada tanggal "%" dengan nomor tiket "%" sudah pernah diajukan sebelumnya.',
+        NEW.flight_number, NEW.tanggal_penerbangan, NEW.nomor_tiket;
     END IF;
 
-    SELECT negara INTO v_negara_asal
-    FROM bandara
-    WHERE iata_code = p_bandara_asal;
-
-    IF NOT FOUND THEN
-        RAISE EXCEPTION 'Bandara asal % tidak ditemukan.', p_bandara_asal;
-    END IF;
-
-    SELECT negara INTO v_negara_tujuan
-    FROM bandara
-    WHERE iata_code = p_bandara_tujuan;
-
-    IF NOT FOUND THEN
-        RAISE EXCEPTION 'Bandara tujuan % tidak ditemukan.', p_bandara_tujuan;
-    END IF;
-
-    v_base_miles := CASE
-        WHEN v_negara_asal = v_negara_tujuan THEN 1000
-        ELSE 2500
-    END;
-
-    v_multiplier := CASE p_kelas_kabin
-        WHEN 'Economy' THEN 1
-        WHEN 'Premium Economy' THEN 1.5
-        WHEN 'Business' THEN 2
-        WHEN 'First' THEN 3
-        ELSE NULL
-    END;
-
-    IF v_multiplier IS NULL THEN
-        RAISE EXCEPTION 'Kelas kabin % tidak valid.', p_kelas_kabin;
-    END IF;
-
-    RETURN (v_base_miles * v_multiplier)::INT;
+    RETURN NEW;
 END;
-$$;
+$$ LANGUAGE plpgsql;
 
-CREATE OR REPLACE PROCEDURE sp_proses_claim_missing_miles(
-    p_id_klaim INT,
-    p_email_staf VARCHAR,
-    p_status VARCHAR
-)
-LANGUAGE plpgsql
-AS $$
+DROP TRIGGER IF EXISTS trg_duplicate_claim_missing_miles ON claim_missing_miles;
+
+CREATE TRIGGER trg_duplicate_claim_missing_miles
+BEFORE INSERT OR UPDATE OF email_member, flight_number, tanggal_penerbangan, nomor_tiket
+ON claim_missing_miles
+FOR EACH ROW
+EXECUTE FUNCTION check_duplicate_claim_missing_miles();
+
+CREATE OR REPLACE FUNCTION update_member_tier_by_total_miles()
+RETURNS TRIGGER AS $$
 DECLARE
-    v_klaim RECORD;
-    v_staf_exists BOOLEAN;
-    v_miles_tambah INT;
+    tier_baru VARCHAR(10);
+    nama_tier_lama VARCHAR(50);
+    nama_tier_baru VARCHAR(50);
 BEGIN
-    IF p_status NOT IN ('Disetujui', 'Ditolak') THEN
-        RAISE EXCEPTION 'Status klaim tidak valid. Status harus Disetujui atau Ditolak.';
+    SELECT id_tier
+    INTO tier_baru
+    FROM tier
+    WHERE minimal_tier_miles <= COALESCE(NEW.total_miles, 0)
+    ORDER BY minimal_tier_miles DESC
+    LIMIT 1;
+
+    IF tier_baru IS NOT NULL AND NEW.id_tier IS DISTINCT FROM tier_baru THEN
+        SELECT nama
+        INTO nama_tier_lama
+        FROM tier
+        WHERE id_tier = NEW.id_tier;
+
+        SELECT nama
+        INTO nama_tier_baru
+        FROM tier
+        WHERE id_tier = tier_baru;
+
+        NEW.id_tier := tier_baru;
+
+        RAISE NOTICE
+        'SUKSES: Tier Member "%" telah diperbarui dari "%" menjadi "%" berdasarkan total miles yang dimiliki.',
+        NEW.email, COALESCE(nama_tier_lama, '-'), nama_tier_baru;
     END IF;
 
-    SELECT EXISTS (
-        SELECT 1 FROM staf WHERE LOWER(email) = LOWER(p_email_staf)
-    ) INTO v_staf_exists;
-
-    IF NOT v_staf_exists THEN
-        RAISE EXCEPTION 'Staf dengan email % tidak ditemukan.', p_email_staf;
-    END IF;
-
-    SELECT id, email_member, maskapai, bandara_asal, bandara_tujuan,
-           tanggal_penerbangan, kelas_kabin, status_penerimaan
-    INTO v_klaim
-    FROM claim_missing_miles
-    WHERE id = p_id_klaim
-    FOR UPDATE;
-
-    IF NOT FOUND THEN
-        RAISE EXCEPTION 'Klaim tidak ditemukan.';
-    END IF;
-
-    IF v_klaim.status_penerimaan <> 'Menunggu' THEN
-        RAISE EXCEPTION 'Klaim sudah diproses dan tidak dapat diubah lagi.';
-    END IF;
-
-    UPDATE claim_missing_miles
-    SET status_penerimaan = p_status,
-        email_staf = (
-            SELECT email FROM staf WHERE LOWER(email) = LOWER(p_email_staf)
-        )
-    WHERE id = p_id_klaim;
-
-    IF p_status = 'Disetujui' THEN
-        v_miles_tambah := fn_hitung_missing_miles(
-            v_klaim.bandara_asal,
-            v_klaim.bandara_tujuan,
-            v_klaim.kelas_kabin
-        );
-
-        UPDATE member
-        SET award_miles = award_miles + v_miles_tambah,
-            total_miles = total_miles + v_miles_tambah
-        WHERE email = v_klaim.email_member;
-    END IF;
+    RETURN NEW;
 END;
-$$;
+$$ LANGUAGE plpgsql;
 
-CREATE OR REPLACE PROCEDURE sp_transfer_miles(
-    p_email_pengirim VARCHAR,
-    p_email_penerima VARCHAR,
-    p_jumlah INT,
-    p_catatan VARCHAR DEFAULT NULL
-)
-LANGUAGE plpgsql
-AS $$
-DECLARE
-    v_email_pengirim VARCHAR(100);
-    v_email_penerima VARCHAR(100);
-    v_saldo_pengirim INT;
-BEGIN
-    IF p_email_pengirim IS NULL OR TRIM(p_email_pengirim) = '' THEN
-        RAISE EXCEPTION 'Email pengirim wajib diisi.';
-    END IF;
+DROP TRIGGER IF EXISTS trg_update_member_tier ON member;
 
-    IF p_email_penerima IS NULL OR TRIM(p_email_penerima) = '' THEN
-        RAISE EXCEPTION 'Email penerima wajib diisi.';
-    END IF;
-
-    IF LOWER(p_email_pengirim) = LOWER(p_email_penerima) THEN
-        RAISE EXCEPTION 'Tidak dapat mentransfer miles ke diri sendiri.';
-    END IF;
-
-    IF p_jumlah IS NULL OR p_jumlah <= 0 THEN
-        RAISE EXCEPTION 'Jumlah transfer harus lebih besar dari 0.';
-    END IF;
-
-    SELECT email, award_miles
-    INTO v_email_pengirim, v_saldo_pengirim
-    FROM member
-    WHERE LOWER(email) = LOWER(p_email_pengirim)
-    FOR UPDATE;
-
-    IF NOT FOUND THEN
-        RAISE EXCEPTION 'Member pengirim tidak ditemukan.';
-    END IF;
-
-    SELECT email
-    INTO v_email_penerima
-    FROM member
-    WHERE LOWER(email) = LOWER(p_email_penerima)
-    FOR UPDATE;
-
-    IF NOT FOUND THEN
-        RAISE EXCEPTION 'Email penerima bukan member aktif.';
-    END IF;
-
-    IF v_saldo_pengirim < p_jumlah THEN
-        RAISE EXCEPTION 'Award miles tidak mencukupi. Saldo saat ini: % miles.', v_saldo_pengirim;
-    END IF;
-
-    UPDATE member
-    SET award_miles = award_miles - p_jumlah
-    WHERE email = v_email_pengirim;
-
-    UPDATE member
-    SET award_miles = award_miles + p_jumlah
-    WHERE email = v_email_penerima;
-
-    INSERT INTO transfer (
-        email_member_1,
-        email_member_2,
-        timestamp,
-        jumlah,
-        catatan
-    )
-    VALUES (
-        v_email_pengirim,
-        v_email_penerima,
-        NOW(),
-        p_jumlah,
-        NULLIF(TRIM(p_catatan), '')
-    );
-END;
-$$;
-
-ALTER TABLE IF EXISTS claim_missing_miles
-DROP CONSTRAINT IF EXISTS claim_missing_miles_kelas_kabin_check;
-
-ALTER TABLE IF EXISTS claim_missing_miles
-ADD CONSTRAINT claim_missing_miles_kelas_kabin_check
-CHECK (kelas_kabin IN ('Economy', 'Premium Economy', 'Business', 'First'));
+CREATE TRIGGER trg_update_member_tier
+BEFORE INSERT OR UPDATE OF total_miles
+ON member
+FOR EACH ROW
+EXECUTE FUNCTION update_member_tier_by_total_miles();

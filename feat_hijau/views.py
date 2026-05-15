@@ -1,7 +1,7 @@
 from functools import wraps
 
 from django.contrib import messages
-from django.db import DatabaseError, IntegrityError, connection, transaction
+from django.db import DatabaseError, connection, transaction
 from django.http import JsonResponse
 from django.shortcuts import redirect, render
 from django.views.decorators.http import require_POST
@@ -18,12 +18,19 @@ KELAS_KABIN = {'Economy', 'Premium Economy', 'Business', 'First'}
 
 
 def _clean_db_error(error):
-    """Ambil pesan error PostgreSQL yang paling mudah dibaca user."""
+    """Ambil pesan ERROR dari PostgreSQL/trigger/procedure agar bisa ditampilkan di web."""
     message = str(error).strip()
+
     for marker in ('CONTEXT:', 'DETAIL:', 'HINT:'):
         if marker in message:
             message = message.split(marker)[0].strip()
-    return message or 'Terjadi kesalahan pada database.'
+
+    lines = [line.strip() for line in message.splitlines() if line.strip()]
+    message = lines[0] if lines else 'Terjadi kesalahan pada database.'
+    message = message.replace('ERROR:  ERROR:', 'ERROR:')
+    message = message.replace('ERROR: ERROR:', 'ERROR:')
+
+    return message
 
 
 def _fetchone_dict(cursor):
@@ -292,8 +299,6 @@ def klaim_baru(request):
                     tanggal_penerbangan, flight_number, nomor_tiket, kelas_kabin, pnr,
                 ])
         messages.success(request, 'Klaim berhasil diajukan.')
-    except IntegrityError:
-        messages.error(request, 'Klaim duplikat atau data tidak valid. Cek kembali flight number, nomor tiket, maskapai, dan bandara.')
     except DatabaseError as error:
         messages.error(request, _clean_db_error(error))
 
@@ -346,9 +351,8 @@ def klaim_edit(request, klaim_id):
                     messages.error(request, 'Klaim tidak dapat diedit karena tidak ditemukan atau sudah diproses.')
                 else:
                     messages.success(request, 'Klaim berhasil diperbarui.')
-    except IntegrityError:
-        messages.error(request, 'Perubahan klaim menyebabkan duplikasi atau melanggar aturan data.')
     except DatabaseError as error:
+        # Jika ada trigger/constraint database yang menolak update, tampilkan pesan dari database.
         messages.error(request, _clean_db_error(error))
 
     return redirect('feat_hijau:klaim_miles')
@@ -476,15 +480,57 @@ def update_status_klaim(request, klaim_id):
     try:
         with transaction.atomic():
             with connection.cursor() as cursor:
-                cursor.execute("CALL sp_proses_claim_missing_miles(%s, %s, %s)", [klaim_id, email_staf, new_status])
+                cursor.execute("""
+                    SELECT c.email_member, c.flight_number, t.nama AS tier_lama
+                    FROM claim_missing_miles c
+                    JOIN member m ON c.email_member = m.email
+                    JOIN tier t ON m.id_tier = t.id_tier
+                    WHERE c.id = %s
+                """, [klaim_id])
+                data_awal = cursor.fetchone()
 
-        status_label = 'disetujui' if new_status == 'Disetujui' else 'ditolak'
-        messages.success(request, f'Klaim berhasil {status_label}.')
+                cursor.execute(
+                    "CALL sp_proses_claim_missing_miles(%s, %s, %s)",
+                    [klaim_id, email_staf, new_status]
+                )
+
+                if data_awal:
+                    email_member = data_awal[0]
+                    flight_number = data_awal[1]
+                    tier_lama = data_awal[2]
+
+                    cursor.execute("""
+                        SELECT t.nama
+                        FROM member m
+                        JOIN tier t ON m.id_tier = t.id_tier
+                        WHERE m.email = %s
+                    """, [email_member])
+                    row_tier_baru = cursor.fetchone()
+                    tier_baru = row_tier_baru[0] if row_tier_baru else tier_lama
+
+                    if new_status == 'Disetujui':
+                        if tier_lama != tier_baru:
+                            messages.success(
+                                request,
+                                f'SUKSES: Tier Member "{email_member}" telah diperbarui dari "{tier_lama}" menjadi "{tier_baru}" berdasarkan total miles yang dimiliki.'
+                            )
+                        else:
+                            messages.success(
+                                request,
+                                f'SUKSES: Total miles Member "{email_member}" telah diperbarui dari klaim penerbangan "{flight_number}".'
+                            )
+                    else:
+                        messages.success(
+                            request,
+                            f'SUKSES: Klaim penerbangan "{flight_number}" milik Member "{email_member}" berhasil ditolak.'
+                        )
+                else:
+                    messages.success(request, 'SUKSES: Proses klaim berhasil.')
+
     except DatabaseError as error:
         messages.error(request, _clean_db_error(error))
 
     return redirect('feat_hijau:kelola_klaim')
-
 
 @member_required
 def transfer_miles(request):
@@ -522,7 +568,6 @@ def transfer_miles(request):
     }
     return render(request, 'transfer_miles.html', context)
 
-
 @member_required
 @require_POST
 def transfer_baru(request):
@@ -540,11 +585,39 @@ def transfer_baru(request):
     try:
         with transaction.atomic():
             with connection.cursor() as cursor:
-                cursor.execute("CALL sp_transfer_miles(%s, %s, %s, %s)", [
-                    email_pengirim, email_penerima, jumlah, catatan,
-                ])
+                # Ambil tier penerima sebelum transfer
+                cursor.execute("""
+                    SELECT t.nama
+                    FROM member m
+                    JOIN tier t ON m.id_tier = t.id_tier
+                    WHERE LOWER(m.email) = LOWER(%s)
+                """, [email_penerima])
+                row_tier_lama = cursor.fetchone()
+                tier_lama = row_tier_lama[0] if row_tier_lama else None
 
-        messages.success(request, f'Transfer {jumlah} miles ke {email_penerima} berhasil.')
+                # Panggil stored procedure versi sederhana: 4 parameter
+                cursor.execute(
+                    "CALL sp_transfer_miles(%s, %s, %s, %s)",
+                    [email_pengirim, email_penerima, jumlah, catatan]
+                )
+
+                # Ambil tier penerima setelah transfer
+                cursor.execute("""
+                    SELECT t.nama
+                    FROM member m
+                    JOIN tier t ON m.id_tier = t.id_tier
+                    WHERE LOWER(m.email) = LOWER(%s)
+                """, [email_penerima])
+                row_tier_baru = cursor.fetchone()
+                tier_baru = row_tier_baru[0] if row_tier_baru else tier_lama
+
+        pesan = f'SUKSES: Transfer {jumlah} miles dari "{email_pengirim}" ke "{email_penerima}" berhasil dicatat.'
+
+        if tier_lama and tier_baru and tier_lama != tier_baru:
+            pesan += f' SUKSES: Tier Member "{email_penerima}" telah diperbarui dari "{tier_lama}" menjadi "{tier_baru}" berdasarkan total miles yang dimiliki.'
+
+        messages.success(request, pesan)
+
     except DatabaseError as error:
         messages.error(request, _clean_db_error(error))
 
