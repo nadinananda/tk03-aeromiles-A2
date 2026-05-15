@@ -45,6 +45,7 @@
                     <div class="card-body">
                         <span class="badge bg-dark mb-3 rounded-pill px-3 py-2 fw-normal">{{ hadiah.kode_hadiah }}</span>
                         <h5 class="card-title fw-bold">{{ hadiah.nama }}</h5>
+                        <p class="card-text text-muted small mb-2">Penyedia: {{ hadiah.penyedia_nama }}</p>
                         <p class="card-text text-muted small mb-4">{{ hadiah.deskripsi }}</p>
                         
                         <div class="mb-4">
@@ -105,6 +106,7 @@
     <div class="modal-dialog modal-dialog-centered">
         <form method="POST" action="{% url 'feat_merah:member_redeem' %}" class="modal-content rounded-4 border-0 shadow">
             {% csrf_token %}
+            <input type="hidden" name="action" value="redeem_confirm">
             <input type="hidden" name="kode_hadiah" id="hiddenKodeHadiah">
             
             <div class="modal-header border-0 pb-0 px-4 pt-4">
@@ -126,7 +128,7 @@
 </div>
 {% endblock content %}
 
-{% block scripts %}
+{% block extra_js %}
 <script>
     document.addEventListener('DOMContentLoaded', function () {
         const tabs = document.querySelectorAll('button[data-bs-toggle="pill"]');
@@ -151,4 +153,4 @@
         });
     });
 </script>
-{% endblock scripts %}
+{% endblock extra_js %}

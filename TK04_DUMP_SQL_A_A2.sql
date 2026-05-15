@@ -176,6 +176,7 @@ FROM generate_series(1, 50) as x;
 
 -- PENYEDIA (8 Data)
 INSERT INTO PENYEDIA (id) VALUES (1),(2),(3),(4),(5),(6),(7),(8);
+SELECT setval(pg_get_serial_sequence('aeromiles.penyedia', 'id'), (SELECT MAX(id) FROM PENYEDIA), true);
 
 -- MASKAPAI (5 Data) memakai id_penyedia 1, 2, 3
 INSERT INTO MASKAPAI (kode_maskapai, nama_maskapai, id_penyedia) VALUES

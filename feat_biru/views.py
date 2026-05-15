@@ -6,47 +6,7 @@ def check_role(request, expected_role):
     return request.session.get('role') == expected_role
 
 def redeem_hadiah_view(request):
-    if not check_role(request, 'Member'):
-        return redirect('main:dashboard')
-
-    email_user = request.session.get('email')
-
-    # Handle POST (Proses Redeem)
-    if request.method == 'POST':
-        kode_hadiah = request.POST.get('kode_hadiah')
-        try:
-            with connection.cursor() as cursor:
-                # Insert ke tabel REDEEM (Nanti pengurangan saldo di-handle Trigger 3)
-                cursor.execute("""
-                    INSERT INTO aeromiles.REDEEM (email_member, kode_hadiah, timestamp)
-                    VALUES (%s, %s, NOW())
-                """, [email_user, kode_hadiah])
-            messages.success(request, 'Yeay, berhasil redeem hadiah!')
-        except Exception as e:
-            messages.error(request, f'Gagal redeem: {str(e)}')
-        return redirect('feat_biru:redeem_hadiah')
-
-    # Handle GET (Tampilin Daftar Hadiah)
-    with connection.cursor() as cursor:
-        cursor.execute("""
-            SELECT h.kode_hadiah, h.nama, h.miles, m.nama_mitra, h.program_end 
-            FROM aeromiles.HADIAH h
-            LEFT JOIN aeromiles.MITRA m ON h.id_penyedia = m.id_penyedia
-            WHERE h.program_end >= CURRENT_DATE
-        """)
-        rows = cursor.fetchall()
-
-    hadiah_list = []
-    for r in rows:
-        hadiah_list.append({
-            'kode': r[0],
-            'nama': r[1],
-            'miles': r[2],
-            'penyedia': r[3] if r[3] else 'Penyedia Umum',
-            'berlaku_sampai': str(r[4])
-        })
-
-    return render(request, 'redeem_hadiah.html', {'hadiah_list': hadiah_list})
+    return redirect('feat_merah:member_redeem')
 
 
 def beli_package_view(request):
