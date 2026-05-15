@@ -1,10 +1,35 @@
 from datetime import date
 from django.shortcuts import redirect, render
-from django.db import connection
+from django.db import DatabaseError, connection, transaction
 from django.contrib import messages
-from django.http import JsonResponse
-import json
-from decimal import Decimal
+
+
+def _clean_db_error(error):
+    """Ambil bagian error PostgreSQL yang paling relevan untuk ditampilkan."""
+    message = str(error).strip()
+    for marker in ("CONTEXT:", "DETAIL:", "HINT:"):
+        if marker in message:
+            message = message.split(marker)[0].strip()
+    if "ERROR:" in message:
+        message = message.split("ERROR:", 1)[1].strip()
+    return message or "Terjadi kesalahan pada database."
+
+
+def _fetchall_dict(cursor):
+    columns = [col[0] for col in cursor.description]
+    return [dict(zip(columns, row)) for row in cursor.fetchall()]
+
+
+def _pop_db_success_notice():
+    notices = getattr(connection.connection, "notices", []) if connection.connection else []
+    success_message = None
+    for notice in reversed(notices):
+        if "SUKSES:" in notice:
+            success_message = "SUKSES:" + notice.split("SUKSES:", 1)[1].strip()
+            break
+    if hasattr(notices, "clear"):
+        notices.clear()
+    return success_message
 
 def _current_user(request):
     """Get current user from session"""
@@ -69,95 +94,160 @@ def manage_rewards_view(request):
 
     error_msg = None
     success_msg = None
+    provider_filter = request.GET.get('provider', 'semua')
+    status_filter = request.GET.get('status', 'semua')
 
     with connection.cursor() as cursor:
         if request.method == 'POST':
             action = request.POST.get('action')
-            
-            try:
-                if action == 'create':
-                    nama = request.POST.get('nama')
-                    miles = int(request.POST.get('miles'))
-                    deskripsi = request.POST.get('deskripsi')
-                    valid_start = request.POST.get('valid_start')
-                    program_end = request.POST.get('program_end')
-                    id_penyedia = int(request.POST.get('id_penyedia'))
-                    
-                  
-                    cursor.execute("""
-                        SELECT COALESCE(MAX(CAST(SUBSTRING(kode_hadiah, 5) AS INTEGER)), 0) + 1 
-                        FROM aeromiles.HADIAH
-                    """)
-                    next_id = cursor.fetchone()[0]
-                    kode_hadiah = f"RWD-{next_id:03d}"
-                    
-                    cursor.execute("""
-                        INSERT INTO aeromiles.HADIAH 
-                        (kode_hadiah, nama, miles, deskripsi, valid_start_date, program_end, id_penyedia)
-                        VALUES (%s, %s, %s, %s, %s, %s, %s)
-                    """, [kode_hadiah, nama, miles, deskripsi, valid_start, program_end, id_penyedia])
-                    
-                    success_msg = f"Hadiah '{nama}' berhasil ditambahkan dengan kode {kode_hadiah}."
-                
-                elif action == 'update':
-                    kode_hadiah = request.POST.get('kode_hadiah')
-                    nama = request.POST.get('nama')
-                    miles = int(request.POST.get('miles'))
-                    deskripsi = request.POST.get('deskripsi')
-                    valid_start = request.POST.get('valid_start')
-                    program_end = request.POST.get('program_end')
-                    
-                    cursor.execute("""
-                        UPDATE aeromiles.HADIAH 
-                        SET nama = %s, miles = %s, deskripsi = %s, 
-                            valid_start_date = %s, program_end = %s
-                        WHERE kode_hadiah = %s
-                    """, [nama, miles, deskripsi, valid_start, program_end, kode_hadiah])
-                    
-                    success_msg = f"Hadiah '{nama}' berhasil diperbarui."
-                
-                elif action == 'delete':
-                    kode_hadiah = request.POST.get('kode_hadiah')
-                    
-                   
-                    cursor.execute("""
-                        SELECT program_end FROM aeromiles.HADIAH WHERE kode_hadiah = %s
-                    """, [kode_hadiah])
-                    result = cursor.fetchone()
-                    
-                    if result and result[0] < date.today():
-                        cursor.execute("""
-                            DELETE FROM aeromiles.HADIAH WHERE kode_hadiah = %s
-                        """, [kode_hadiah])
-                        success_msg = "Hadiah berhasil dihapus."
-                    else:
-                        error_msg = "Hadiah hanya dapat dihapus setelah periode berakhir."
-                
-                if success_msg:
-                    return redirect('feat_merah:manage_rewards')
-                    
-            except Exception as e:
-                error_msg = f"Error: {str(e)}"
 
-       
+            try:
+                with transaction.atomic():
+                    if action == 'create':
+                        nama = request.POST.get('nama', '').strip()
+                        miles = int(request.POST.get('miles'))
+                        deskripsi = request.POST.get('deskripsi', '').strip()
+                        valid_start = request.POST.get('valid_start')
+                        program_end = request.POST.get('program_end')
+                        id_penyedia = int(request.POST.get('id_penyedia'))
+
+                        cursor.execute("LOCK TABLE aeromiles.HADIAH IN SHARE ROW EXCLUSIVE MODE")
+                        cursor.execute("""
+                            SELECT COALESCE(MAX(CAST(SUBSTRING(kode_hadiah FROM 5) AS INTEGER)), 0) + 1
+                            FROM aeromiles.HADIAH
+                            WHERE kode_hadiah ~ '^RWD-[0-9]+$'
+                        """)
+                        next_id = cursor.fetchone()[0]
+                        kode_hadiah = f"RWD-{next_id:03d}"
+
+                        cursor.execute("""
+                            INSERT INTO aeromiles.HADIAH
+                                (kode_hadiah, nama, miles, deskripsi, valid_start_date, program_end, id_penyedia)
+                            VALUES (%s, %s, %s, %s, %s, %s, %s)
+                        """, [kode_hadiah, nama, miles, deskripsi, valid_start, program_end, id_penyedia])
+
+                        success_msg = f"Hadiah '{nama}' berhasil ditambahkan dengan kode {kode_hadiah}."
+
+                    elif action == 'update':
+                        kode_hadiah = request.POST.get('kode_hadiah')
+                        nama = request.POST.get('nama', '').strip()
+                        miles = int(request.POST.get('miles'))
+                        deskripsi = request.POST.get('deskripsi', '').strip()
+                        valid_start = request.POST.get('valid_start')
+                        program_end = request.POST.get('program_end')
+                        id_penyedia = int(request.POST.get('id_penyedia'))
+
+                        cursor.execute("""
+                            UPDATE aeromiles.HADIAH
+                            SET nama = %s,
+                                miles = %s,
+                                deskripsi = %s,
+                                valid_start_date = %s,
+                                program_end = %s,
+                                id_penyedia = %s
+                            WHERE kode_hadiah = %s
+                        """, [nama, miles, deskripsi, valid_start, program_end, id_penyedia, kode_hadiah])
+
+                        if cursor.rowcount == 0:
+                            error_msg = "Hadiah tidak ditemukan."
+                        else:
+                            success_msg = f"Hadiah '{nama}' berhasil diperbarui."
+
+                    elif action == 'delete':
+                        kode_hadiah = request.POST.get('kode_hadiah')
+
+                        cursor.execute("""
+                            SELECT program_end
+                            FROM aeromiles.HADIAH
+                            WHERE kode_hadiah = %s
+                        """, [kode_hadiah])
+                        result = cursor.fetchone()
+
+                        if not result:
+                            error_msg = "Hadiah tidak ditemukan."
+                        elif result[0] >= date.today():
+                            error_msg = "Hadiah hanya dapat dihapus setelah periode berakhir."
+                        else:
+                            cursor.execute("""
+                                DELETE FROM aeromiles.REDEEM
+                                WHERE kode_hadiah = %s
+                            """, [kode_hadiah])
+                            cursor.execute("""
+                                DELETE FROM aeromiles.HADIAH
+                                WHERE kode_hadiah = %s
+                            """, [kode_hadiah])
+                            success_msg = "Hadiah berhasil dihapus."
+
+                if success_msg:
+                    messages.success(request, success_msg)
+                    return redirect('feat_merah:manage_rewards')
+
+            except (DatabaseError, ValueError) as e:
+                error_msg = _clean_db_error(e)
+
+        reward_query = """
+            WITH maskapai_provider AS (
+                SELECT id_penyedia, STRING_AGG(nama_maskapai, ', ' ORDER BY nama_maskapai) AS nama_penyedia
+                FROM aeromiles.MASKAPAI
+                GROUP BY id_penyedia
+            ),
+            reward_rows AS (
+                SELECT
+                    h.kode_hadiah,
+                    h.nama,
+                    h.miles,
+                    h.deskripsi,
+                    h.valid_start_date,
+                    h.program_end,
+                    h.id_penyedia,
+                    COALESCE(m.nama_mitra, mp.nama_penyedia, 'Penyedia #' || h.id_penyedia::text) AS penyedia_nama,
+                    CASE
+                        WHEN CURRENT_DATE < h.valid_start_date THEN 'Akan Datang'
+                        WHEN CURRENT_DATE > h.program_end THEN 'Selesai'
+                        ELSE 'Aktif'
+                    END AS status
+                FROM aeromiles.HADIAH h
+                LEFT JOIN aeromiles.MITRA m ON h.id_penyedia = m.id_penyedia
+                LEFT JOIN maskapai_provider mp ON h.id_penyedia = mp.id_penyedia
+            )
+            SELECT *
+            FROM reward_rows
+            WHERE 1 = 1
+        """
+        params = []
+
+        if provider_filter != 'semua':
+            reward_query += " AND id_penyedia = %s"
+            params.append(provider_filter)
+
+        if status_filter in ('Aktif', 'Akan Datang', 'Selesai'):
+            reward_query += " AND status = %s"
+            params.append(status_filter)
+
+        reward_query += " ORDER BY kode_hadiah DESC"
+        cursor.execute(reward_query, params)
+        hadiah_list = _fetchall_dict(cursor)
+
         cursor.execute("""
-            SELECT 
-                h.kode_hadiah, h.nama, h.miles, h.deskripsi, 
-                h.valid_start_date, h.program_end, h.id_penyedia,
-                CASE 
-                    WHEN CURRENT_DATE < valid_start_date THEN 'Akan Datang'
-                    WHEN CURRENT_DATE > program_end THEN 'Selesai'
-                    ELSE 'Aktif'
-                END as status
-            FROM aeromiles.HADIAH h
-            ORDER BY h.kode_hadiah DESC
+            WITH maskapai_provider AS (
+                SELECT id_penyedia, STRING_AGG(nama_maskapai, ', ' ORDER BY nama_maskapai) AS nama_penyedia
+                FROM aeromiles.MASKAPAI
+                GROUP BY id_penyedia
+            )
+            SELECT
+                p.id,
+                COALESCE(m.nama_mitra, mp.nama_penyedia, 'Penyedia #' || p.id::text) AS nama_penyedia,
+                CASE
+                    WHEN m.email_mitra IS NOT NULL THEN 'Mitra'
+                    WHEN mp.nama_penyedia IS NOT NULL THEN 'Maskapai'
+                    ELSE 'Penyedia'
+                END AS tipe
+            FROM aeromiles.PENYEDIA p
+            LEFT JOIN aeromiles.MITRA m ON p.id = m.id_penyedia
+            LEFT JOIN maskapai_provider mp ON p.id = mp.id_penyedia
+            ORDER BY p.id
         """)
-        columns = [col[0] for col in cursor.description]
-        hadiah_list = [dict(zip(columns, row)) for row in cursor.fetchall()]
-        
-     
-        cursor.execute("SELECT id, id FROM aeromiles.PENYEDIA ORDER BY id")
-        providers = [{"id": row[0]} for row in cursor.fetchall()]
+        providers = _fetchall_dict(cursor)
 
     context = {
         'hadiah_list': hadiah_list,
@@ -165,6 +255,9 @@ def manage_rewards_view(request):
         'today': date.today().isoformat(),
         'error': error_msg,
         'success': success_msg,
+        'provider_filter': provider_filter,
+        'status_filter': status_filter,
+        'active_page': 'kelola_hadiah',
     }
     return render(request, 'feat_merah/manage_rewards.html', context)
 
@@ -181,68 +274,89 @@ def manage_partners_view(request):
     with connection.cursor() as cursor:
         if request.method == 'POST':
             action = request.POST.get('action')
-            
-            try:
-                if action == 'create':
-                    email_mitra = request.POST.get('email')
-                    nama_mitra = request.POST.get('nama')
-                    tanggal_kerja_sama = request.POST.get('tanggal_kerja_sama')
-                    
-                   
-                    cursor.execute("INSERT INTO aeromiles.PENYEDIA DEFAULT VALUES RETURNING id")
-                    id_penyedia = cursor.fetchone()[0]
-                    
-                
-                    cursor.execute("""
-                        INSERT INTO aeromiles.MITRA 
-                        (email_mitra, id_penyedia, nama_mitra, tanggal_kerja_sama)
-                        VALUES (%s, %s, %s, %s)
-                    """, [email_mitra, id_penyedia, nama_mitra, tanggal_kerja_sama])
-                    
-                    success_msg = f"Mitra '{nama_mitra}' berhasil ditambahkan."
-                
-                elif action == 'update':
-                    email_mitra = request.POST.get('email')
-                    nama_mitra = request.POST.get('nama')
-                    tanggal_kerja_sama = request.POST.get('tanggal_kerja_sama')
-                    
-                    cursor.execute("""
-                        UPDATE aeromiles.MITRA 
-                        SET nama_mitra = %s, tanggal_kerja_sama = %s
-                        WHERE email_mitra = %s
-                    """, [nama_mitra, tanggal_kerja_sama, email_mitra])
-                    
-                    success_msg = f"Mitra '{nama_mitra}' berhasil diperbarui."
-                
-                elif action == 'delete':
-                    email_mitra = request.POST.get('email')
-                    
-                 
-                    cursor.execute("""
-                        SELECT id_penyedia FROM aeromiles.MITRA WHERE email_mitra = %s
-                    """, [email_mitra])
-                    result = cursor.fetchone()
-                    
-                    if result:
-                        id_penyedia = result[0]
-                        
-                        cursor.execute("""
-                            DELETE FROM aeromiles.MITRA WHERE email_mitra = %s
-                        """, [email_mitra])
-                        
-                        success_msg = "Mitra berhasil dihapus."
-                    else:
-                        error_msg = "Mitra tidak ditemukan."
-                
-                if success_msg:
-                    return redirect('feat_merah:manage_partners')
-                    
-            except Exception as e:
-                error_msg = f"Error: {str(e)}"
 
-       
+            try:
+                with transaction.atomic():
+                    if action == 'create':
+                        email_mitra = request.POST.get('email', '').strip().lower()
+                        nama_mitra = request.POST.get('nama', '').strip()
+                        tanggal_kerja_sama = request.POST.get('tanggal_kerja_sama')
+
+                        cursor.execute("LOCK TABLE aeromiles.PENYEDIA IN SHARE ROW EXCLUSIVE MODE")
+                        cursor.execute("SELECT COALESCE(MAX(id), 0) + 1 FROM aeromiles.PENYEDIA")
+                        id_penyedia = cursor.fetchone()[0]
+
+                        cursor.execute("""
+                            INSERT INTO aeromiles.PENYEDIA (id)
+                            VALUES (%s)
+                        """, [id_penyedia])
+                        cursor.execute("""
+                            SELECT setval(pg_get_serial_sequence('aeromiles.penyedia', 'id'), %s, true)
+                        """, [id_penyedia])
+
+                        cursor.execute("""
+                            INSERT INTO aeromiles.MITRA
+                                (email_mitra, id_penyedia, nama_mitra, tanggal_kerja_sama)
+                            VALUES (%s, %s, %s, %s)
+                        """, [email_mitra, id_penyedia, nama_mitra, tanggal_kerja_sama])
+
+                        success_msg = f"Mitra '{nama_mitra}' berhasil ditambahkan."
+
+                    elif action == 'update':
+                        email_mitra = request.POST.get('email', '').strip()
+                        nama_mitra = request.POST.get('nama', '').strip()
+                        tanggal_kerja_sama = request.POST.get('tanggal_kerja_sama')
+
+                        cursor.execute("""
+                            UPDATE aeromiles.MITRA
+                            SET nama_mitra = %s,
+                                tanggal_kerja_sama = %s
+                            WHERE LOWER(email_mitra) = LOWER(%s)
+                        """, [nama_mitra, tanggal_kerja_sama, email_mitra])
+
+                        if cursor.rowcount == 0:
+                            error_msg = "Mitra tidak ditemukan."
+                        else:
+                            success_msg = f"Mitra '{nama_mitra}' berhasil diperbarui."
+
+                    elif action == 'delete':
+                        email_mitra = request.POST.get('email', '').strip()
+
+                        cursor.execute("""
+                            SELECT id_penyedia
+                            FROM aeromiles.MITRA
+                            WHERE LOWER(email_mitra) = LOWER(%s)
+                        """, [email_mitra])
+                        mitra_result = cursor.fetchone()
+
+                        if not mitra_result:
+                            error_msg = "Mitra tidak ditemukan."
+                        else:
+                            id_penyedia = mitra_result[0]
+                            cursor.execute("""
+                                DELETE FROM aeromiles.REDEEM
+                                WHERE kode_hadiah IN (
+                                    SELECT kode_hadiah
+                                    FROM aeromiles.HADIAH
+                                    WHERE id_penyedia = %s
+                                )
+                            """, [id_penyedia])
+                            cursor.execute("""
+                                DELETE FROM aeromiles.PENYEDIA
+                                WHERE id = %s
+                            """, [id_penyedia])
+
+                            success_msg = "Mitra berhasil dihapus."
+
+                if success_msg:
+                    messages.success(request, success_msg)
+                    return redirect('feat_merah:manage_partners')
+
+            except (DatabaseError, ValueError) as e:
+                error_msg = _clean_db_error(e)
+
         cursor.execute("""
-            SELECT 
+            SELECT
                 m.email_mitra, m.id_penyedia, m.nama_mitra, m.tanggal_kerja_sama,
                 COUNT(h.kode_hadiah) as hadiah_count
             FROM aeromiles.MITRA m
@@ -250,13 +364,13 @@ def manage_partners_view(request):
             GROUP BY m.email_mitra, m.id_penyedia, m.nama_mitra, m.tanggal_kerja_sama
             ORDER BY m.tanggal_kerja_sama DESC
         """)
-        columns = [col[0] for col in cursor.description]
-        partners_list = [dict(zip(columns, row)) for row in cursor.fetchall()]
+        partners_list = _fetchall_dict(cursor)
 
     context = {
         'partners': partners_list,
         'error': error_msg,
         'success': success_msg,
+        'active_page': 'kelola_mitra',
     }
     return render(request, 'feat_merah/manage_partners.html', context)
 
@@ -274,23 +388,40 @@ def member_redeem_view(request):
 
     error_msg = None
     success_msg = None
+    confirmation_data = None
     
     with connection.cursor() as cursor:
         if request.method == 'POST':
             kode_hadiah = request.POST.get('kode_hadiah')
-            
+            action = request.POST.get('action', 'redeem_confirm')
+
             try:
-                cursor.execute("""
-                    INSERT INTO aeromiles.REDEEM (email_member, kode_hadiah, timestamp)
-                    VALUES (%s, %s, CURRENT_TIMESTAMP)
-                """, [user["email"], kode_hadiah])
+                if action == 'confirm':
+                    # Get hadiah details for confirmation
+                    cursor.execute("""
+                        SELECT nama, miles FROM aeromiles.HADIAH WHERE kode_hadiah = %s
+                    """, [kode_hadiah])
+                    hadiah_info = cursor.fetchone()
+                    
+                    if hadiah_info:
+                        confirmation_data = {
+                            'kode_hadiah': kode_hadiah,
+                            'nama': hadiah_info[0],
+                            'miles': hadiah_info[1]
+                        }
                 
-                success_msg = f"Hadiah berhasil ditukarkan!"
-                
-            except Exception as e:
-                error_msg = str(e)
-                if "ERROR:" in error_msg:
-                    error_msg = error_msg.split("ERROR:")[1].strip()
+                elif action == 'redeem_confirm':
+                    # Perform actual redeem
+                    cursor.execute("""
+                        INSERT INTO aeromiles.REDEEM (email_member, kode_hadiah, timestamp)
+                        VALUES (%s, %s, CURRENT_TIMESTAMP)
+                    """, [user["email"], kode_hadiah])
+
+                    messages.success(request, "Hadiah berhasil ditukarkan.")
+                    return redirect('feat_merah:member_redeem')
+
+            except DatabaseError as e:
+                error_msg = _clean_db_error(e)
 
         cursor.execute("""
             SELECT award_miles, total_miles, id_tier 
@@ -301,30 +432,32 @@ def member_redeem_view(request):
         member_miles = member_info[0] if member_info else 0
         
         cursor.execute("""
-            SELECT 
-                h.kode_hadiah, h.nama, h.miles, h.deskripsi, 
-                h.valid_start_date, h.program_end, h.id_penyedia,
-                p.nama_maskapai as penyedia_nama
-            FROM aeromiles.HADIAH h
-            LEFT JOIN aeromiles.MASKAPAI p ON h.id_penyedia = (
-                SELECT id_penyedia FROM aeromiles.MASKAPAI m WHERE m.kode_maskapai = p.kode_maskapai LIMIT 1
+            WITH maskapai_provider AS (
+                SELECT id_penyedia, STRING_AGG(nama_maskapai, ', ' ORDER BY nama_maskapai) AS nama_penyedia
+                FROM aeromiles.MASKAPAI
+                GROUP BY id_penyedia
             )
+            SELECT
+                h.kode_hadiah, h.nama, h.miles, h.deskripsi,
+                h.valid_start_date, h.program_end, h.id_penyedia,
+                COALESCE(m.nama_mitra, mp.nama_penyedia, 'Penyedia #' || h.id_penyedia::text) AS penyedia_nama
+            FROM aeromiles.HADIAH h
+            LEFT JOIN aeromiles.MITRA m ON h.id_penyedia = m.id_penyedia
+            LEFT JOIN maskapai_provider mp ON h.id_penyedia = mp.id_penyedia
             WHERE CURRENT_DATE BETWEEN h.valid_start_date AND h.program_end
             ORDER BY h.nama
         """)
-        columns = [col[0] for col in cursor.description]
-        available_hadiah = [dict(zip(columns, row)) for row in cursor.fetchall()]
-        
+        available_hadiah = _fetchall_dict(cursor)
+
         cursor.execute("""
-            SELECT 
+            SELECT
                 r.kode_hadiah, h.nama, h.miles, r.timestamp
             FROM aeromiles.REDEEM r
             JOIN aeromiles.HADIAH h ON r.kode_hadiah = h.kode_hadiah
             WHERE r.email_member = %s
             ORDER BY r.timestamp DESC
         """, [user["email"]])
-        columns = [col[0] for col in cursor.description]
-        redeem_history = [dict(zip(columns, row)) for row in cursor.fetchall()]
+        redeem_history = _fetchall_dict(cursor)
 
     context = {
         'user': user,
@@ -333,5 +466,150 @@ def member_redeem_view(request):
         'redeem_history': redeem_history,
         'error': error_msg,
         'success': success_msg,
+        'confirmation': confirmation_data,
+        'active_page': 'redeem',
     }
     return render(request, 'feat_merah/member_redeem.html', context)
+
+
+# ============================================================================
+# CLAIM MISSING MILES APPROVAL - UPDATE FOR STAF
+# ============================================================================
+
+def approve_claim_missing_miles_view(request):
+    """Approve claim missing miles - triggers member miles update"""
+    role_redirect = _require_role(request, 'Staf')
+    if role_redirect:
+        return role_redirect
+
+    error_msg = None
+    success_msg = None
+
+    with connection.cursor() as cursor:
+        if request.method == 'POST':
+            claim_id = request.POST.get('claim_id')
+            status = request.POST.get('status')  # 'Disetujui' or 'Ditolak'
+            
+            try:
+                # Get staf email from session
+                staf_email = request.session.get('email')
+                
+                # Call stored procedure to process claim
+                cursor.execute("""
+                    CALL aeromiles.sp_proses_claim_missing_miles(%s::integer, %s::varchar, %s::varchar)
+                """, [claim_id, staf_email, status])
+                db_success_msg = _pop_db_success_notice()
+                
+                # Get success message
+                cursor.execute("""
+                    SELECT 
+                        email_member, flight_number 
+                    FROM aeromiles.CLAIM_MISSING_MILES 
+                    WHERE id = %s
+                """, [claim_id])
+                claim_info = cursor.fetchone()
+                if claim_info:
+                    member_email, flight_number = claim_info
+                    if status == 'Disetujui':
+                        success_msg = f'SUKSES: Total miles Member "{member_email}" telah diperbarui. Miles ditambahkan: 1000 miles dari klaim penerbangan "{flight_number}".'
+                    else:
+                        success_msg = f'SUKSES: Klaim penerbangan untuk member "{member_email}" telah ditolak.'
+
+                success_msg = db_success_msg or success_msg
+                if success_msg:
+                    messages.success(request, success_msg)
+                return redirect('feat_merah:laporan_transaksi')
+
+            except DatabaseError as e:
+                error_msg = _clean_db_error(e)
+
+        cursor.execute("""
+            SELECT 
+                id, email_member, maskapai, bandara_asal, bandara_tujuan, 
+                tanggal_penerbangan, flight_number, nomor_tiket, 
+                kelas_kabin, pnr, status_penerimaan, timestamp
+            FROM aeromiles.CLAIM_MISSING_MILES
+            ORDER BY timestamp DESC
+        """)
+        claims = _fetchall_dict(cursor)
+
+    context = {
+        'claims': claims,
+        'error': error_msg,
+        'success': success_msg,
+        'active_page': 'kelola_klaim',
+    }
+    return render(request, 'feat_merah/approve_claims.html', context)
+
+def laporan_transaksi_view(request):
+    """Display transaction report with top 5 members ranking"""
+    role_redirect = _require_role(request, 'Staf')
+    if role_redirect:
+        return role_redirect
+
+    error_msg = None
+    success_msg = None
+    top_5_members = []
+
+    with connection.cursor() as cursor:
+        cursor.execute("SELECT to_regprocedure('aeromiles.get_top_5_members()')")
+        has_top_5_function = cursor.fetchone()[0] is not None
+
+        if has_top_5_function:
+            cursor.execute("SELECT * FROM aeromiles.get_top_5_members()")
+            top_5_members = _fetchall_dict(cursor)
+        else:
+            cursor.execute("""
+                SELECT
+                    ROW_NUMBER() OVER (ORDER BY m.total_miles DESC)::int AS rank,
+                    m.email,
+                    m.nomor_member,
+                    TRIM(p.first_mid_name || ' ' || p.last_name) AS nama_lengkap,
+                    m.total_miles,
+                    m.award_miles,
+                    COALESCE(t.nama, m.id_tier) AS id_tier
+                FROM aeromiles.MEMBER m
+                JOIN aeromiles.PENGGUNA p ON m.email = p.email
+                LEFT JOIN aeromiles.TIER t ON m.id_tier = t.id_tier
+                ORDER BY m.total_miles DESC
+                LIMIT 5
+            """)
+            top_5_members = _fetchall_dict(cursor)
+
+        cursor.execute("SELECT to_regprocedure('aeromiles.display_top_5_members_report()')")
+        has_report_function = cursor.fetchone()[0] is not None
+
+        if has_report_function:
+            cursor.execute("SELECT aeromiles.display_top_5_members_report()")
+            report_result = cursor.fetchone()
+            if report_result:
+                success_msg = report_result[0]
+        elif top_5_members:
+            first_member = top_5_members[0]
+            success_msg = (
+                'SUKSES: Daftar Top 5 Member berdasarkan total miles berhasil diperbarui, '
+                f'dengan peringkat pertama "{first_member["email"]}" memiliki '
+                f'{first_member["total_miles"]} miles.'
+            )
+
+        cursor.execute("""
+            SELECT
+                r.email_member,
+                r.kode_hadiah,
+                COALESCE(h.nama, '[Hadiah dihapus]') AS nama,
+                r.timestamp,
+                COALESCE(h.miles, 0) AS miles
+            FROM aeromiles.REDEEM r
+            LEFT JOIN aeromiles.HADIAH h ON r.kode_hadiah = h.kode_hadiah
+            ORDER BY r.timestamp DESC
+        """)
+        all_transactions = _fetchall_dict(cursor)
+
+    context = {
+        'top_5_members': top_5_members,
+        'all_transactions': all_transactions,
+        'error': error_msg,
+        'success': success_msg,
+        'active_page': 'laporan',
+    }
+    return render(request, 'feat_merah/laporan_transaksi.html', context)

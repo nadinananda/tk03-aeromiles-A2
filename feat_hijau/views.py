@@ -46,6 +46,18 @@ def _fetchall_dict(cursor):
     return [dict(zip(cols, row)) for row in cursor.fetchall()]
 
 
+def _pop_db_success_notice():
+    notices = getattr(connection.connection, "notices", []) if connection.connection else []
+    success_message = None
+    for notice in reversed(notices):
+        if "SUKSES:" in notice:
+            success_message = "SUKSES:" + notice.split("SUKSES:", 1)[1].strip()
+            break
+    if hasattr(notices, "clear"):
+        notices.clear()
+    return success_message
+
+
 def login_required_custom(view_func):
     @wraps(view_func)
     def wrapper(request, *args, **kwargs):
